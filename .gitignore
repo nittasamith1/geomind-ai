@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+.venv/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Logs & OS
+logs/
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Model weights & large binaries (keep gitkeeps)
+models/ml/*.pkl
+models/ml/*.joblib
+models/dl/*.pt
+models/dl/*.pth
+!models/ml/.gitkeep
+!models/dl/.gitkeep
+
+# Interim/Processed data (reproducible from data/raw)
+data/processed/*.csv
+!data/processed/.gitkeep
