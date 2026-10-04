@@ -1,193 +1,285 @@
-# GeoMind AI: Self-Learning Urban Traffic Forecasting & Intelligence System
+# 🚦 GeoMind — AI Urban Traffic Forecasting
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red.svg)](https://pytorch.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-green.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Scikit-Learn](https://img.shields.io/badge/scikit--learn-1.3+-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
+[![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-EB5424?style=flat-square&logo=xgboost&logoColor=white)](https://xgboost.ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
-> Targeted Role: **Amazon Applied Scientist I (Intern)**  
-> Core Domain: Multivariate Time-Series Forecasting, Deep Sequential Architectures, ML Systems, Model Interpretability & Uncertainty.
-
----
-
-## 1. Project Overview & Research Motivation
-Urban traffic dynamics exhibit strong spatio-temporal autocorrelations, diurnal and weekly seasonalities, and stochastic shocks driven by severe weather and holidays.
-
-**GeoMind AI** formulates traffic volume prediction as a contextual multivariate time-series problem:
-$$\hat{y}_{t+h} = f\left(\{y_{t-k}, \mathbf{x}_{t-k}\}_{k=0}^{K}, \mathbf{z}_{t+h}\right)$$
-
-Where $y$ represents traffic volume, $\mathbf{x}$ are exogenous weather telemetry features, $\mathbf{z}$ are deterministic calendar features, and $h$ is the prediction horizon.
-
-### Key Questions Investigated:
-1. **Autoregressive vs. Exogenous Value:** How much variance is captured by historical traffic lags vs. meteorological signals?
-2. **Tabular GBDTs vs. Sequential Deep Learning:** Under what sample sizes and temporal horizons do sequence models (LSTM / GRU) outperform gradient boosted decision trees (XGBoost / LightGBM)?
-3. **Error Anatomy & Tail Risk:** In which regime (rush-hour transition, extreme weather, public holidays) do models incur catastrophic residual spikes?
-4. **Autonomous Model Drift & Self-Learning:** How can the system continuously evaluate new telemetry and trigger retraining only when a statistically significant gain is demonstrated?
+> **GeoMind** is an end-to-end Classical Machine Learning project designed to forecast urban highway traffic volume ($R^2 > 0.957$) using purely meteorological and temporal signals. 
+> 
+> **Zero Prior Traffic Volume Required:** Unlike naive autoregressive approaches that require the user to already know current traffic counts, GeoMind predicts traffic from date/time and weather conditions alone.
 
 ---
 
-## 2. Architecture & Directory Structure
+## 🌟 Key Highlights
 
+- 🎯 **High Accuracy ($R^2 = 0.957$ / $\text{MAE} \approx 243\text{ veh/hr}$):** SOTA performance among classical ML models on the Metro Interstate Traffic Volume dataset.
+- 🚫 **No Present Traffic Input Needed:** Eliminates the unrealistic assumption that end users know real-time sensor traffic counts.
+- ⚡ **Ultra-Fast Inference (< 2 ms):** Lightweight classical ML footprint runs seamlessly on any CPU without GPU dependencies.
+- 🤖 **Multi-Model Selector:** Compare predictions across **XGBoost**, **Random Forest**, and **Ridge Regression** directly in the UI.
+- 🕐 **Automatic Date & Time Detection:** Frontend auto-fetches system date/time with click-to-edit flexibility.
+- 🎨 **Modern Web Interface:** Dark glassmorphic design featuring animated counter metrics, traffic congestion indicators, and real-time Kelvin-to-Celsius conversions.
+
+---
+
+## 📊 Model Leaderboard
+
+All models evaluated on chronological train ($70\%$), validation ($15\%$), and test ($15\%$) partitions of the Metro Interstate dataset (~48,000 hourly observations):
+
+| Rank | Model | Paradigm | Val MAE | Val $R^2$ | Test MAE | Test $R^2$ | Inference | Status |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| 🥇 | **XGBoost Regressor** | Gradient Boosted Trees | **273.21** | **0.9553** | **243.22** | **0.9570** | **~1.5 ms** | **Best** |
+| 🥈 | **Random Forest** | Bagged Decision Trees | 281.27 | 0.9522 | 251.86 | 0.9557 | ~2.2 ms | Candidate |
+| 🥉 | **Ridge Regression** | Regularized Linear ($L_2$) | 796.56 | 0.7319 | 791.73 | 0.7450 | < 1 ms | Baseline |
+| — | **Unconditional Mean**| Statistical Baseline | 1,723.00 | -0.0044 | 1,735.79 | -0.0033 | 0 ms | Lower Bound |
+
+*Units: MAE in vehicles/hour. Traffic volume spans 0 to 7,280 veh/hr.*
+
+---
+
+## 📐 System Architecture
+
+```
+[ User Browser / Client ]
+           │
+           ▼
+[ FastAPI Application (api/main.py) ]
+    ├── Static Mount: /static (frontend/index.html)
+    ├── Documentation: /docs (OpenAPI / Swagger)
+    └── POST /predict
+           │
+           ▼
+[ Inference Pipeline (api/prediction.py) ]
+    │
+    ├── 1. Build Single Observation Vector
+    ├── 2. Feature Engineering (src/feature_engineering.py)
+    │       ├── Cyclical Time Encodings (sin/cos of hour, DOW, month, DOY)
+    │       ├── Commuter Regime Buckets (morning & evening rush, midday, night)
+    │       ├── Weather Friction & Comfort Indices (Celsius, freeze, heavy rain/snow)
+    │       └── Non-linear Cross-interactions
+    │
+    ├── 3. Preprocessing Transformation (models/preprocessor.joblib)
+    │       ├── StandardScaler (numeric features)
+    │       └── OneHotEncoder (weather category)
+    │
+    └── 4. Model Scoring (models/ml/*.joblib)
+            └── Returns Predicted Volume (veh/hr) + Congestion Level + Latency
+```
+
+---
+
+## 📥 Prediction Input Specification
+
+The API and Web Interface accept only inputs that an end user or automated weather API can provide:
+
+| Input Field | Type | Unit / Format | Description & Example |
+| :--- | :---: | :---: | :--- |
+| `date_time` | String | ISO 8601 | Auto-filled timestamp (e.g. `2026-10-01T08:00:00`) |
+| `model_type` | String | Categorical | `xgboost` (default), `random_forest`, or `ridge_regression` |
+| `temp` | Float | Kelvin | Ambient temperature (e.g. `288.15` K $\approx 15^\circ$C) |
+| `weather_main`| String | Categorical | `Clear`, `Clouds`, `Rain`, `Snow`, `Mist`, `Thunderstorm`, etc. |
+| `rain_1h` | Float | mm | Rainfall accumulation in the last hour (e.g. `0.0`) |
+| `snow_1h` | Float | mm | Snowfall accumulation in the last hour (e.g. `0.0`) |
+| `clouds_all` | Integer | % | Cloud cover percentage (`0` to `100`%) |
+| `holiday` | String | Categorical | US Federal/State holiday name, or `'None'` |
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Prerequisites & Virtual Environment
+Ensure you have Python 3.10+ installed.
+
+```powershell
+# Clone the repository
+git clone https://github.com/nittasamith1/geomind-ai.git
+cd GeoMind
+
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate   # Windows
+# source .venv/bin/activate # Linux / macOS
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Run the Full ML Pipeline
+Ingests data, executes feature engineering, fits transformers, and trains all models:
+
+```powershell
+python run_pipeline.py
+```
+
+### 3. Launch the Web Application & API
+
+#### Local Windows Development:
+```powershell
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+- 🌐 **Web Interface:** [http://localhost:8000](http://localhost:8000)
+- 📖 **Interactive Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- 🩺 **Health Check Endpoint:** [http://localhost:8000/health](http://localhost:8000/health)
+
+---
+
+## ☁️ AWS EC2 Deployment
+
+GeoMind is fully configured for direct deployment on an **AWS EC2 Ubuntu (22.04 / 24.04 LTS)** CPU instance (e.g. `t2.micro` Free Tier) without Docker or cloud lock-in.
+
+### Quick Start on Ubuntu EC2:
+
+```bash
+# 1. Update system packages
+sudo apt update && sudo apt install python3 python3-pip python3-venv git -y
+
+# 2. Clone repository & enter directory
+git clone https://github.com/<your-username>/GeoMind.git
+cd GeoMind
+
+# 3. Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 4. Install production dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 5. Verify models & preprocessing
+python tests/run_tests.py
+
+# 6. Start production server (bound to 0.0.0.0)
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+### Production Background Service (`systemd`):
+```bash
+sudo cp deployment/geomind.service /etc/systemd/system/geomind.service
+sudo systemctl daemon-reload
+sudo systemctl enable geomind.service
+sudo systemctl start geomind.service
+sudo systemctl status geomind.service
+```
+
+### Public AWS Deployment URLs:
+- 🌐 **Web UI:** `http://<EC2_PUBLIC_IP>:8000/`
+- 📖 **Swagger API Docs:** `http://<EC2_PUBLIC_IP>:8000/docs`
+- 🩺 **Health Check:** `http://<EC2_PUBLIC_IP>:8000/health`
+- 🔮 **Inference Endpoint:** `http://<EC2_PUBLIC_IP>:8000/predict`
+
+*(For full step-by-step instructions from creating EC2 security groups to viewing journalctl logs, see [docs/AWS_EC2_DEPLOYMENT.md](docs/AWS_EC2_DEPLOYMENT.md) and the [docs/AWS_DEPLOYMENT_CHECKLIST.md](docs/AWS_DEPLOYMENT_CHECKLIST.md).)*
+
+---
+
+## 🧪 Verification & Testing
+
+Execute the automated verification suite to test model serialization, inference integrity, and regime contrasts:
+
+```powershell
+python tests/run_tests.py
+```
+
+Expected output:
 ```text
-GeoMind-AI/
-│
-├── data/
-│   ├── raw/                  # Real raw sensor telemetry (48,204 rows)
-│   └── processed/            # Deduplicated & sanitized train/val/test splits
-│
-├── notebooks/
-│   ├── 01_eda.ipynb          # Exploratory data analysis & statistical tests
-│   ├── 02_feature_engineering.ipynb # Feature transformations & cyclical encodings
-│   ├── 03_ml_models.ipynb    # Baselines, Linear, Random Forest, XGBoost
-│   ├── 04_deep_learning.ipynb# LSTM & GRU PyTorch sequence models
-│   └── 05_model_evaluation.ipynb # Error analysis, SHAP, & uncertainty intervals
-│
-├── src/
-│   ├── __init__.py
-│   ├── data_ingestion.py     # Ingestion, timestamp deduplication, & split
-│   ├── data_preprocessing.py # Scalers, encoders, and leakage-safe transforms
-│   ├── feature_engineering.py# Lags, rolling windows, & cyclical features
-│   ├── train_ml.py           # ML model training & hyperparameter search
-│   ├── train_dl.py           # PyTorch sequence dataset & training loops
-│   ├── evaluate.py           # MAE, RMSE, R2, and regime error analysis
-│   └── predict.py            # Unified inference engine for ML & DL models
-│
-├── models/
-│   ├── ml/                   # Serialized ML models (joblib)
-│   └── dl/                   # Serialized PyTorch checkpoints (.pt)
-│
-├── experiments/
-│   └── results.csv           # Experiment tracking & model registry
-│
+Testing model loading...
+Status: {'preprocessor': True, 'xgboost': True, 'random_forest': True, 'ridge_regression': True}
+
+Running inference across all models:
+  Model: xgboost            | Prediction: 5617.0 veh/hr | Level: Very High
+  Model: random_forest      | Prediction: 5730.0 veh/hr | Level: Very High
+  Model: ridge_regression   | Prediction: 4195.4 veh/hr | Level: High
+
+Comparing Rush hour (8 AM: 5617.0 veh/hr) vs Night (2 AM: 356.6 veh/hr):
+  Comparison validation passed: rush hour traffic is significantly higher than night traffic!
+Storm weather traffic prediction at 8 AM: 5446.8 veh/hr (High)
+
+ALL VERIFICATIONS PASSED SUCCESSFULLY!
+```
+
+---
+
+## 📡 API Reference
+
+### `POST /predict`
+Predict traffic volume for a target hour and weather condition.
+
+**Request Body:**
+```json
+{
+  "observation": {
+    "date_time": "2026-10-01T08:00:00",
+    "temp": 288.15,
+    "rain_1h": 0.0,
+    "snow_1h": 0.0,
+    "clouds_all": 20.0,
+    "weather_main": "Clear",
+    "holiday": "None"
+  },
+  "model_type": "xgboost"
+}
+```
+
+**Response Body (200 OK):**
+```json
+{
+  "status": "success",
+  "model_used": "xgboost",
+  "input_datetime": "2026-10-01T08:00:00",
+  "predicted_traffic_volume": 5617.0,
+  "traffic_level": "Very High",
+  "unit": "vehicles/hr",
+  "inference_ms": 1.48
+}
+```
+
+---
+
+## 📁 Repository Structure
+
+```
+GeoMind/
 ├── api/
-│   ├── main.py               # FastAPI application with lifecycle management
-│   ├── schemas.py            # Pydantic request & response contracts
-│   └── prediction.py         # Serving routes for single & multi-step forecast
-│
+│   ├── main.py                 # FastAPI application & route declarations
+│   ├── prediction.py           # Model loading & inference engine
+│   └── schemas.py              # Pydantic request & response contracts
+├── data/
+│   ├── raw/                    # Metro Interstate Traffic Volume dataset
+│   └── processed/              # train.csv, val.csv, test.csv
+├── docs/                       # Comprehensive scientific documentation
+│   ├── 01_problem.md           # Problem formulation & mathematical objectives
+│   ├── 02_dataset.md           # Dataset provenance & schema profiling
+│   ├── 03_eda.md               # Exploratory data analysis & empirical patterns
+│   ├── 04_feature_engineering.md # Contextual & meteorological feature rationale
+│   ├── 05_baseline_experiments.md# Statistical baselines benchmark
+│   └── 06_ml_experiments.md    # Classical ML leaderboard & trade-off analysis
+├── frontend/
+│   └── index.html              # Modern glassmorphism web UI
+├── models/
+│   ├── preprocessor.joblib     # Fitted StandardScaler & OneHotEncoder
+│   └── ml/                     # Serialized classical ML models
+│       ├── xgboost.joblib
+│       ├── random_forest.joblib
+│       └── ridge_regression.joblib
+├── src/
+│   ├── data_ingestion.py       # Cleaning, deduplication & splitting
+│   ├── data_preprocessing.py   # Transformer pipelines
+│   ├── evaluate.py             # MAE, RMSE, R² metrics
+│   ├── exception.py            # Traceback exception handling
+│   ├── feature_engineering.py  # Pure contextual & meteorological features
+│   ├── logger.py               # Centralized logging configuration
+│   └── train_ml.py             # Model training & leaderboard generation
 ├── tests/
-│   ├── test_preprocessing.py # Ingestion & split non-leakage tests
-│   ├── test_features.py      # Feature transformation & cyclical integrity
-│   └── test_prediction.py    # API contracts & inference robustness
-│
-├── requirements.txt
-├── .gitignore
-├── .env.example
-└── README.md
+│   ├── run_tests.py            # Standalone end-to-end verification script
+│   ├── test_features.py        # Feature engineering tests
+│   ├── test_prediction.py      # FastAPI prediction route tests
+│   └── test_preprocessing.py   # Transformer pipeline tests
+├── requirements.txt            # Project dependencies
+├── run_pipeline.py             # One-click end-to-end pipeline runner
+└── README.md                   # Project documentation
 ```
 
 ---
 
-## 3. Dataset Characteristics & Integrity Findings
-- **Data Source:** Metro Interstate Traffic Volume (I-94 Westbound between Minneapolis and St. Paul, MN; MnDOT / UCI).
-- **Time Span:** 2012-10-02 to 2018-09-30 (6 years).
-- **Target Variable:** `traffic_volume` (Hourly vehicle count, mean: 3,260, max: 7,280).
-- **Timestamp Duplicates:** 7,629 duplicate hours resolved via scientific aggregation.
-- **Sensor Anomalies:** 10 records with unphysical $0.0\text{ K}$ (-273.15 °C) temperature and 1 record with $9,831.3\text{ mm}$ rain spike sanitized via time-weighted interpolation and boundary clipping.
-- **Chronological Split:** Train (70% = 28,402 hrs), Validation (15% = 6,086 hrs), Test (15% = 6,087 hrs) with mathematical verification of zero future leakage.
-
----
-
-## 4. Experimental Results & Leaderboard
-
-All models evaluated strictly on the out-of-time test set (6,087 sequential hourly intervals). Experiments are tracked in `experiments/results.csv`.
-
-| Model Family | Architecture / Algorithm | Sequence Length ($L$) | Test MAE (veh/hr) | Test RMSE (veh/hr) | Test $R^2$ | Inference Time | Status |
-|---|---|---|---|---|---|---|---|
-| **Baseline** | Historical Mean | — | 1,745.2 | 1,986.4 | 0.000 | < 1 ms | Reference |
-| **Baseline** | Persistence ($y_t$) | — | 412.8 | 684.3 | 0.881 | < 1 ms | Reference |
-| **ML** | Ridge Regression | — | 289.4 | 451.2 | 0.948 | 2 ms | Baseline |
-| **ML** | Random Forest (150 trees) | — | 148.6 | 291.5 | 0.978 | 138 ms | Benchmark |
-| **ML (Champion)** | **XGBoost (Histogram-based)** | — | **130.0** | **272.4** | **0.981** | **103 ms** | **Production Champion** |
-| **Deep Learning** | PyTorch LSTM (2-layer + Huber) | $L=6$ hrs | **212.5** | **346.7** | **0.969** | 71 ms | DL Champion |
-| **Deep Learning** | PyTorch GRU (2-layer + Huber) | $L=12$ hrs | 223.7 | 339.4 | 0.971 | 100 ms | Efficient DL |
-| **Deep Learning** | PyTorch LSTM (2-layer + Huber) | $L=24$ hrs | 222.8 | 348.3 | 0.969 | 85 ms | Long Horizon |
-| **Deep Learning** | PyTorch LSTM (2-layer + Huber) | $L=12$ hrs | 228.1 | 368.9 | 0.965 | 78 ms | Comparison |
-
----
-
-## 5. Applied Scientist Insights & Research Findings
-
-### 1. Tabular GBDT vs. Deep Sequence Modeling
-- **XGBoost achieves the lowest test error (MAE: 130.0 vs. LSTM's 212.5)** when provided with domain-engineered temporal lags ($t-1, t-2, t-3, t-24$) and rolling window statistics ($3\text{h}, 6\text{h}, 24\text{h}$).
-- The inductive bias of gradient boosted trees on engineered tabular features excels because traffic exhibits rigid periodicities (diurnal rush hours, weekly cycles) that explicit lags capture directly without requiring sequence optimization.
-- **Deep sequential models (LSTM/GRU)** shine in raw sequence spaces without handcrafted features, achieving strong $R^2 > 0.969$ with fast sub-100ms inference.
-
-### 2. Context Length Ablation ($L \in \{6, 12, 24\}$)
-- **Short context ($L=6$) outperforms $L=12$ and $L=24$ for LSTM**: In next-hour forecasting, recent short-term momentum dominates. Longer unrolled sequences introduce slight gradient noise and overfitting on non-stationary regimes.
-- **GRU vs. LSTM**: GRU achieves competitive performance (MAE 223.7 vs 228.1 at $L=12$) with 25% fewer gating parameters and faster convergence.
-
-### 3. Error Slicing & Residual Analysis
-- **Rush-Hour Transitions (7–9 AM, 4–6 PM)** account for the largest variance in residual errors due to sudden demand influx and stochastic congestion onset.
-- **Precipitation Regimes**: Extreme rain and snow produce systematic under-predictions if models rely solely on calendar features; exogenous weather signals act as a crucial dampener on predicted speed/capacity.
-- **SHAP TreeExplainer**: Quantified that `traffic_lag_1` (previous hour volume) contributes 42% of total feature attribution, followed by `hour_sin` / `hour_cos` (26%), and rolling 3-hour mean (14%).
-
----
-
-## 6. Production Model Serving (FastAPI)
-
-Production-ready, asynchronous REST API serving both traditional ML and PyTorch Deep Learning models.
-
-### API Capabilities:
-- **Lifespan Startup:** Eagerly warms and caches all model checkpoints in memory (zero cold-start latency).
-- **Strict Contract Validation:** Pydantic models validate sensor limits (temperature 200–330K, non-negative traffic volume, ISO-8601 timestamps).
-- **Dual Inference Paradigms:**
-  - Single-observation forecast via contextual temporal padding.
-  - Multi-observation batch forecast with rolling temporal context.
-- **Production Metrics:** Every response includes model metadata, forecast horizon, and measured execution time ($< 150\text{ ms}$).
-
-### Quick Start:
-
-```bash
-# 1. Start the API server
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-
-# 2. Interactive Swagger UI
-open http://localhost:8000/docs
-```
-
-#### Example Single Prediction Request:
-```bash
-curl -X POST "http://localhost:8000/predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "observation": {
-      "date_time": "2024-08-15T08:00:00",
-      "temp": 287.5,
-      "rain_1h": 0.0,
-      "snow_1h": 0.0,
-      "clouds_all": 40.0,
-      "weather_main": "Clear",
-      "holiday": "None",
-      "traffic_volume": 4200.0
-    },
-    "model_type": "xgboost"
-  }'
-```
-
----
-
-## 7. Verification & Testing
-
-The system is tested end-to-end with **65 automated unit and integration tests** (100% pass rate):
-
-```bash
-# Run all unit and integration tests
-pytest tests/ -v
-```
-
-- `test_features.py` (25 tests): Verifies temporal leakage prevention, cyclical trigonometry identities, rolling-window bounds, and NaN handling.
-- `test_preprocessing.py` (10 tests): Verifies train-only scaler fitting, serialization round-trips, and dimension consistency.
-- `test_prediction.py` (30 tests): Verifies FastAPI routes, input boundary validation, batch processing, response schemas, and inference latency.
-
----
-
-## 8. Alignment with Amazon Applied Scientist I Competencies
-
-| Amazon Applied Scientist Expectation | Demonstrated in GeoMind AI |
-|---|---|
-| **Problem Formulation** | Formulated non-stationary urban traffic as autoregressive multivariate time-series forecasting with exogenous features. |
-| **Statistical & ML Rigor** | Temporal train/val/test splits without leakage; strong baselines (Mean, Persistence); ablation studies ($L=6, 12, 24$). |
-| **Deep Learning** | PyTorch sequential models (LSTM, GRU), Huber loss optimization, early stopping, target normalization. |
-| **Model Interpretability** | SHAP TreeExplainer global and local feature attributions; sliced residual error analysis across time and weather regimes. |
-| **Production Engineering** | Clean modular architecture (`src/`, `api/`, `tests/`), FastAPI microservice, Pydantic schemas, 65 automated tests. |
-
+## 📄 License
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

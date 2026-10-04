@@ -1,21 +1,32 @@
-import logging
 import os
 import sys
+import logging
 from datetime import datetime
+from pathlib import Path
 
-LOGS_DIR = os.path.join(os.getcwd(), "logs")
-os.makedirs(LOGS_DIR, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-LOG_FILE = os.path.join(LOGS_DIR, f"geomind_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+log_level = getattr(logging, log_level_str, logging.INFO)
 
-# Configure root logger with both File and Stream handlers
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] - %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_FILE, encoding="utf-8"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+log_file = LOG_DIR / f"{datetime.now().strftime('%Y_%m_%d')}.log"
 
-logger = logging.getLogger("GeoMindAI")
+logger = logging.getLogger("GeoMind")
+logger.setLevel(log_level)
+
+if not logger.handlers:
+    formatter = logging.Formatter("[%(asctime)s] %(levelname)s - %(name)s - %(message)s")
+
+    # File handler
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(log_level)
+    logger.addHandler(file_handler)
+
+    # Console / systemd stdout handler
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(log_level)
+    logger.addHandler(stream_handler)

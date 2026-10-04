@@ -1,56 +1,63 @@
 # 04 — Feature Engineering & Preprocessing Rationale
 
-## 1. Objective & Target Variable Formulation
-In this phase, we transform raw tabular and time telemetry into an expressive, leakage-safe feature space designed for predicting next-hour traffic volume ($t+1$):
+## 1. Core Architectural Principle: No Target Leakage & Clean User Inference
 
-$$y_t = \text{traffic\_volume}_{t+1}$$
+In real-world deployment, traffic volume is the **unknown forecast target**. End users should never be asked to input the current hour's traffic count to predict traffic. 
 
-### Temporal Continuity Verification (Gap Protection)
-In empirical time-series datasets, telemetry can be interrupted due to power failures or sensor maintenance. A naive indexing shift (`df.shift(-1)`) naively associates consecutive rows regardless of time elapsed. 
-
-In `src/feature_engineering.py`, we enforce:
-$$\text{Target}(t) = \begin{cases} y_{t+1}, & \text{if } \Delta t = t_{i+1} - t_i == 1\text{ hour} \\ \text{NaN}, & \text{otherwise} \end{cases}$$
-
-This guarantees that multi-hour or multi-day telemetry interruptions never contaminate our 1-hour ahead forecasting models.
+In `src/feature_engineering.py`, feature generation is completely decoupled from past or present traffic volume:
+- **During Training:** `traffic_volume` is isolated strictly as the label (`traffic_volume_target`) and excluded from the feature matrix.
+- **During Inference:** The model accepts only user-accessible contextual signals: date/time, temperature, weather condition, rain, snow, cloud cover, and holiday status.
 
 ---
 
-## 2. Feature Taxonomies & Scientific Rationale
+## 2. Feature Taxonomies & Engineering Rationale
 
-### A. Cyclical Trigonometric Encodings
-In linear and neural network architectures, raw integers representing circular time ($0, 1, \dots, 23$) introduce an artificial discontinuity: hour 23 and hour 0 are separated by 1 hour in reality, but by $23$ in integer arithmetic.
+### A. Multi-Scale Cyclical Trigonometric Encodings
+Integer representations of time ($0, \dots, 23$) introduce artificial numerical discontinuities (e.g. 23:00 and 00:00 are 1 hour apart in reality, but 23 units apart numerically). We project temporal cycles onto the 2D Euclidean unit circle:
 
-We project `hour` and `day_of_week` onto the unit circle:
 $$\sin_{\text{hour}} = \sin\left(\frac{2\pi \cdot \text{hour}}{24}\right), \quad \cos_{\text{hour}} = \cos\left(\frac{2\pi \cdot \text{hour}}{24}\right)$$
-$$\sin_{\text{day}} = \sin\left(\frac{2\pi \cdot \text{day\_of\_week}}{7}\right), \quad \cos_{\text{day}} = \cos\left(\frac{2\pi \cdot \text{day\_of\_week}}{7}\right)$$
+$$\sin_{\text{dow}} = \sin\left(\frac{2\pi \cdot \text{day\_of\_week}}{7}\right), \quad \cos_{\text{dow}} = \cos\left(\frac{2\pi \cdot \text{day\_of\_week}}{7}\right)$$
+$$\sin_{\text{month}} = \sin\left(\frac{2\pi \cdot \text{month}}{12}\right), \quad \cos_{\text{month}} = \cos\left(\frac{2\pi \cdot \text{month}}{12}\right)$$
+$$\sin_{\text{doy}} = \sin\left(\frac{2\pi \cdot \text{day\_of\_year}}{365}\right), \quad \cos_{\text{doy}} = \cos\left(\frac{2\pi \cdot \text{day\_of\_year}}{365}\right)$$
 
-This preserves Euclidean distance $\|\mathbf{x}_{23} - \mathbf{x}_0\|_2 \approx \|\mathbf{x}_1 - \mathbf{x}_0\|_2$.
+This guarantees seamless continuity across midnight, weekly transitions, and seasonal shifts.
 
-### B. Autoregressive Lag Features
-Guided by our Autocorrelation Function (ACF) discoveries in Phase 2 ($\rho_1 = 0.896, \rho_{24} = 0.708$), we extract:
-- Short-term momentum: $\text{lag}_1, \text{lag}_2, \text{lag}_3$
-- Intermediate diurnal transition: $\text{lag}_6, \text{lag}_{12}$
-- Diurnal seasonal memory: $\text{lag}_{24}$
+### B. Commute Regimes & Part-of-Day Categorization
+- `is_weekend`: Binary flag identifying Saturday and Sunday.
+- `is_holiday`: Binary flag active during US Federal and State holidays.
+- `rush_bucket`: Discretized commuter timeline:
+  - `0`: Off-peak / standard flow
+  - `1`: Morning rush hour (07:00–09:00, weekdays)
+  - `2`: Evening rush hour (16:00–18:00, weekdays)
+  - `3`: Midday commercial flow (10:00–15:00)
+  - `4`: Overnight trough (00:00–05:00)
+- `is_rush_hour`: Active flag for morning and evening weekday peaks.
+- `part_of_day`: Binned day phases (night, morning, midday, afternoon, evening).
 
-Each lag explicitly checks whether $t - t_{-k} == k\text{ hours}$ to prevent gap distortion.
+### C. Meteorological Signals & Derived Domain Indicators
+- **Temperature Normalization & Comfort Index:** Ambient temperature converted to Celsius ($T_{\text{C}} = T_{\text{K}} - 273.15$). We compute `temp_comfortable` ($15^\circ\text{C} \le T_{\text{C}} \le 25^\circ\text{C}$), `temp_extreme_cold` ($< 0^\circ\text{C}$), and `temp_extreme_hot` ($> 35^\circ\text{C}$).
+- **Precipitation Severity:** `has_rain`, `has_snow`, `rain_heavy` ($> 5\text{ mm}$), `snow_heavy` ($> 0.5\text{ mm}$), and `precip_total` ($=\text{rain} + \text{snow}$).
+- **Cloud Coverage Buckets:** `mostly_clear` ($\le 25\%$) and `overcast` ($\ge 75\%$).
+- **Weather Severity Hierarchy:** Ordinal mapping reflecting roadway safety risk:
+  - Severe ($2$): `Snow`, `Thunderstorm`
+  - Moderate ($1$): `Rain`, `Drizzle`, `Mist`, `Fog`, `Haze`, `Smoke`
+  - Mild ($0$): `Clear`, `Clouds`
+- `bad_weather`: Unified binary alert when road conditions degrade commuter flow.
 
-### C. Closed-Left Rolling Window Statistics
-To measure whether traffic volume is accelerating or decelerating entering a congestion phase, we compute:
-- Rolling means: $\mu_3, \mu_6, \mu_{24}$
-- Rolling volatilities: $\sigma_3, \sigma_6, \sigma_{24}$
-
-**Strict Leakage Constraint:** Rolling windows are computed using `closed='left'` (i.e., over $\{y_{t-w}, \dots, y_{t-1}\}$), ensuring the observation at time $t$ is strictly decoupled from the historical rolling state.
-
-### D. Regime & Categorical Indicators
-- `is_weekend`: Binary flag $\{0, 1\}$.
-- `is_rush_hour`: Binary flag $\{0, 1\}$ active during weekday commuter windows (07:00-09:00 and 16:00-18:00).
-- `is_holiday`: Binary flag active during US national/state holidays.
-- `weather_main`: One-hot encoded categorical vector (Clear, Rain, Clouds, Snow, Mist, Fog, Drizzle, Haze, Thunderstorm, Squall, Smoke).
+### D. Compound Non-Linear Interaction Terms
+- `rush_bad_weather`: Intersection of peak commute hours and adverse weather.
+- `rush_weekday`: Peak commute hours isolated to non-holiday working days.
+- `holiday_rush`: Suppression indicator for commuter hours falling on holidays.
+- `weekend_midday`: Captures midday weekend shopping and leisure travel peaks.
+- `summer_weekend`: Accounts for seasonal summer vacation and weekend recreational traffic surges (June–August).
 
 ---
 
-## 3. Preprocessing & Leakage Prevention Guarantees
+## 3. Preprocessing Pipeline & Production Artifacts
 
-1. **Independent Preprocessing:** Preprocessing is implemented in `TrafficPreprocessor` (`src/data_preprocessing.py`) using scikit-learn `ColumnTransformer`.
-2. **Train-Only Fitting:** The mean, standard deviation, and categorical vocabularies are fitted **strictly on `train.csv`**. 
-3. **Artifact Persistence:** The fitted transformer is saved to `models/preprocessor.joblib`. During validation, testing, and production FastAPI inference, the preprocessor transforms incoming vectors using previously learned scaling parameters without refitting.
+Implemented in `src/data_preprocessing.py`:
+1. **ColumnTransformer:**
+   - **Numeric Features (~33):** Scaled via `StandardScaler` (zero mean, unit variance).
+   - **Categorical Features (`weather_main`):** One-hot encoded via `OneHotEncoder(handle_unknown="ignore", sparse_output=False)`.
+2. **Train-Only Fitting:** Fitted strictly on `data/processed/train.csv` (28,400+ samples).
+3. **Artifact Persistence:** Serialized to `models/preprocessor.joblib`. During FastAPI inference, the pipeline transforms incoming single-row observations instantly without refitting.

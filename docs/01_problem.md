@@ -1,34 +1,37 @@
-# 01 — Problem Formulation: Urban Traffic Forecasting & Intelligence
+# 01 — Problem Formulation: Contextual Urban Traffic Forecasting
 
 ## 1. Problem Statement
-Accurate short-term urban traffic forecasting is essential for dynamic route planning, fleet dispatching, carbon emission reduction, and intelligent transportation management. In this project (**GeoMind AI**), we formulate the traffic forecasting task as a multivariate, contextual time-series regression problem.
+Accurate urban traffic volume forecasting enables dynamic route navigation, fleet optimization, municipal congestion mitigation, and emission reduction. In **GeoMind AI**, we formulate traffic forecasting as an **exogenous contextual and meteorological regression problem** using classical Machine Learning.
 
-Given a sequence of historical traffic observations and exogenous environmental factors observed up to time $t$, the objective is to predict the traffic volume at future time steps $t+h$:
+In real-world deployment, an end user or planning authority looking to forecast traffic for a given hour **does not know the real-time sensor traffic count** ahead of time. Requiring users to enter the current traffic volume to predict next-hour volume creates a severe operational barrier and introduces autoregressive error compounding during inference.
 
-$$\hat{y}_{t+h} = f\left(\{y_{t-k}, \mathbf{x}_{t-k}\}_{k=0}^{K}, \mathbf{z}_{t+h}\right)$$
+Therefore, GeoMind formulates the forecasting task to estimate traffic volume purely from **known deterministic temporal signals** and **observable meteorological forecasts**:
+
+$$\hat{y}_{t} = f\left(\mathbf{z}_{t}, \mathbf{w}_{t}\right)$$
 
 Where:
-- $y_t \in \mathbb{R}_{\ge 0}$: Traffic volume (vehicles per hour) at time $t$.
-- $\mathbf{x}_t \in \mathbb{R}^d$: Exogenous contextual observations (ambient temperature, rainfall, snow, cloud cover, weather conditions).
-- $\mathbf{z}_{t+h} \in \mathbb{R}^p$: Deterministic calendar features known ahead of time (hour of day, day of week, holiday indicator, cyclical sine/cosine encodings).
-- $K$: Lookback window (history length, e.g., 12 or 24 previous hours).
-- $h \in \{1, 2, \dots, H\}$: Forecast horizon (initially $h=1$ for next-hour prediction, later extended to multi-step $h \in \{1, \dots, 6\}$).
+- $\hat{y}_t \in \mathbb{R}_{\ge 0}$: Predicted traffic volume (vehicles per hour) at target hour $t$.
+- $\mathbf{z}_t \in \mathbb{R}^p$: Deterministic calendar & temporal features known precisely for any future timestamp (hour of day, day of week, month, day of year, holiday status, rush-hour schedule, cyclical trigonometric projections).
+- $\mathbf{w}_t \in \mathbb{R}^d$: Meteorological features obtainable from weather forecasts or local meteorological stations (temperature, rain precipitation, snowfall accumulation, cloud cover percentage, primary weather category).
 
 ---
 
-## 2. Research Questions (Amazon Applied Scientist Perspective)
-An Applied Scientist does not merely fit standard models; we formulate testable empirical hypotheses:
+## 2. Research Questions & Design Decisions
 
-1. **Information Horizon:** How much historical context ($K$) is required to achieve optimal predictive performance? Is a 12-hour or 24-hour sequence sufficient, or does older context introduce noise?
-2. **Exogenous vs. Autoregressive Signals:** How much predictive gain comes from weather/calendar features versus pure autoregressive lag terms ($\text{lag}_1, \text{lag}_{24}$)?
-3. **Model Inductive Biases:** When do deep sequential architectures (LSTM / GRU) outperform gradient-boosted decision trees (XGBoost / LightGBM) on tabular time-series?
-4. **Error Distribution & Failure Modes:** Are forecast errors uniformly distributed, or do they cluster around non-stationary boundary states (e.g., transition into rush hour, sudden torrential downpours, holidays)?
-5. **Continuous Adaptation:** How can the model autonomously detect distributional drift and decide when to retrain and promote a new candidate checkpoint?
+1. **Contextual Sufficiency without Autoregressive Lags:**  
+   Can classical ML models achieve production-grade predictive accuracy ($R^2 > 0.95$, $\text{MAE} < 280\text{ veh/hr}$) using purely temporal and weather indicators, without relying on real-time traffic volume sensor inputs?
+2. **Temporal Dynamics Modeling:**  
+   How effectively do continuous cyclical encodings ($\sin/\cos$ transformations across daily, weekly, and annual cycles) combined with discrete regime indicators (commuter rush hours, weekend leisure curves, holiday dampening) capture complex diurnal traffic patterns?
+3. **Meteorological Interactions:**  
+   How do adverse weather shocks (heavy rainfall, snowfall, sub-zero freezes, thunderstorms) modulate baseline commuter demand, and can non-linear tree ensembles capture these compound friction effects?
+4. **Classical ML vs. Heavy Architectures:**  
+   Why prioritize classical ML (XGBoost, Random Forest, Ridge Regression)? Classical models deliver sub-millisecond inference latencies (< 5ms), transparent feature importances, lower memory footprints, and instant reproducibility without GPU dependencies.
 
 ---
 
 ## 3. Evaluation Metrics & Optimization Objective
-Traffic volume $y_t$ is continuous and non-negative. We assess models using three complementary statistical metrics:
+
+Traffic volume $y_t$ is a continuous, non-negative quantity. We assess models across three standard statistical metrics:
 
 1. **Mean Absolute Error (MAE):**
    $$\text{MAE} = \frac{1}{N} \sum_{i=1}^N |y_i - \hat{y}_i|$$
@@ -36,8 +39,8 @@ Traffic volume $y_t$ is continuous and non-negative. We assess models using thre
 
 2. **Root Mean Squared Error (RMSE):**
    $$\text{RMSE} = \sqrt{\frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2}$$
-   *Penalizes large errors heavily; critical for congestion spike prevention.*
+   *Penalizes large outlier forecast errors heavily, crucial for highway congestion planning.*
 
 3. **Coefficient of Determination ($R^2$):**
    $$R^2 = 1 - \frac{\sum_{i=1}^N (y_i - \hat{y}_i)^2}{\sum_{i=1}^N (y_i - \bar{y})^2}$$
-   *Quantifies percentage of variance explained relative to a naïve mean baseline.*
+   *Quantifies the proportion of traffic variance explained by the model relative to the unconditional mean.*
