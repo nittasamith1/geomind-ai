@@ -1,0 +1,9 @@
+Model,MAE,RMSE,R2,Train_Time_s,Infer_Time_ms
+XGBoost,83.87,122.9,0.5386,0.585,7.15
+Random Forest,111.78,133.01,0.4596,0.229,32.14
+Gradient Boosting,105.01,140.51,0.397,0.47,8.66
+Decision Tree,130.12,159.98,0.2182,0.046,2.0
+Historical Mean,151.08,183.9,-0.033,0.0,0.0
+Ridge Regression,198.29,237.42,-0.7217,0.049,7.07
+Linear Regression,237.92,289.47,-1.5594,0.056,5.0
+Persistence,838.0,853.48,-21.2495,0.0,0.0

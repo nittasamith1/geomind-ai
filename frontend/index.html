@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoMind AI — Urban Traffic Forecasting</title>
+  <meta name="description" content="Predict highway traffic volume using classical machine learning with meteorological and temporal intelligence." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-base: #070716;
+      --bg-card: rgba(18, 18, 42, 0.72);
+      --bg-card-hover: rgba(26, 26, 58, 0.85);
+      --bg-input: rgba(12, 12, 32, 0.8);
+      --border: rgba(147, 130, 240, 0.16);
+      --border-focus: #8b5cf6;
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.35);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.3);
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.18) 0%, transparent 45%),
+        radial-gradient(circle at 85% 90%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(15, 15, 35, 0.9) 0%, transparent 100%);
+      min-height: 100vh;
+      color: var(--text);
+      padding: 40px 20px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    .app-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #c4b5fd;
+      margin-bottom: 16px;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+    }
+    .badge-pill .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .app-header h1 {
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .app-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Card Container ─────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #a78bfa;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .clean-tag {
+      font-size: 0.72rem;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-weight: 600;
+    }
+
+    /* ── Model Selector Grid ────────────────────── */
+    .model-selector-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 26px;
+    }
+
+    .model-card-input {
+      display: none;
+    }
+
+    .model-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .model-card:hover {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: rgba(139, 92, 246, 0.06);
+      transform: translateY(-2px);
+    }
+
+    .model-card-input:checked + .model-card {
+      border-color: var(--accent);
+      background: rgba(139, 92, 246, 0.14);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .model-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .model-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .best-tag {
+      font-size: 0.65rem;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .model-desc {
+      font-size: 0.74rem;
+      color: var(--text-dim);
+    }
+
+    .model-metric {
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #c4b5fd;
+      margin-top: 4px;
+    }
+
+    /* ── Quick Scenario Chips ───────────────────── */
+    .scenarios-wrap {
+      margin-bottom: 22px;
+      padding: 14px 16px;
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px dashed rgba(139, 92, 246, 0.3);
+      border-radius: var(--radius-sm);
+    }
+    .scenarios-title {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #c4b5fd;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .scenario-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      padding: 6px 14px;
+      color: #e2e8f0;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .chip:hover {
+      background: rgba(139, 92, 246, 0.28);
+      border-color: var(--accent);
+      color: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    }
+    .chip:active {
+      transform: translateY(0);
+    }
+
+    /* ── Grid Layout for Inputs ─────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .field-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .field-label .action-link {
+      font-size: 0.72rem;
+      color: var(--cyan);
+      cursor: pointer;
+      text-transform: none;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+    .field-label .action-link:hover {
+      color: #67e8f9;
+      text-decoration: underline;
+    }
+
+    /* ── Inputs & Selects ───────────────────────── */
+    input[type="text"],
+    input[type="number"],
+    input[type="datetime-local"],
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      background: rgba(18, 18, 48, 0.9);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* Custom styled select with chevron */
+    select {
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px;
+      padding-right: 40px;
+    }
+
+    select option {
+      background-color: #12122b;
+      color: #f1f5f9;
+      padding: 10px;
+    }
+
+    /* Datetime local adjustments */
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.8) brightness(1.2);
+      cursor: pointer;
+    }
+
+    .input-hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      line-height: 1.3;
+    }
+
+    /* Temperature dual control */
+    .temp-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .temp-input-wrap input {
+      flex: 1;
+    }
+    .temp-feedback-pill {
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--cyan);
+      white-space: nowrap;
+      min-width: 95px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    /* Slider styling */
+    .range-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .range-slider {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+    .range-scale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Action Button ──────────────────────────── */
+    .btn-submit {
+      width: 100%;
+      margin-top: 24px;
+      padding: 16px;
+      background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 25px rgba(124, 58, 237, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(124, 58, 237, 0.5);
+    }
+
+    .btn-submit:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Error Box ──────────────────────────────── */
+    .error-card {
+      display: none;
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      color: #fda4af;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+      animation: fadeIn 0.3s ease;
+    }
+    .error-card.visible {
+      display: block;
+    }
+
+    /* ── Results Display ────────────────────────── */
+    .result-card {
+      display: none;
+      background: rgba(18, 18, 42, 0.85);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-bottom: 30px;
+    }
+    .result-card.visible {
+      display: block;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .result-header {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .result-volume-wrap {
+      margin-bottom: 6px;
+    }
+
+    .result-volume {
+      font-size: clamp(3.2rem, 8vw, 4.8rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-unit {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Status Pill */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Progress bar */
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Contextual summary quote */
+    .result-summary {
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      padding: 12px 18px;
+      color: #cbd5e1;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+
+    /* Meta stats grid */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 20px;
+    }
+
+    .meta-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-stat-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-dim);
+    }
+
+    .meta-stat-val {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Level theme variations */
+    .theme-verylow {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .theme-low {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .theme-moderate {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .theme-high {
+      color: #fb923c;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+    .theme-veryhigh {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .theme-severe {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .model-grid {
+        grid-template-columns: 1fr;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .meta-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .card {
+        padding: 24px 18px;
+      }
+      body {
+        padding: 24px 14px 60px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="badge-pill" id="backendBadge">
+        <span class="pulse-dot" id="backendStatusDot"></span>
+        <span id="backendStatusText">GeoMind AI Forecast</span>
+      </div>
+      <h1>Highway Traffic Volume</h1>
+      <p>Classical ML forecasting powered by meteorological conditions and diurnal cycles. No present traffic volume required.</p>
+    </header>
+
+    <!-- Main Card -->
+    <main class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>⚡ Contextual Parameters</span>
+        </div>
+        <span class="clean-tag">✓ Zero Traffic Leakage</span>
+      </div>
+
+      <!-- ML Model Selector -->
+      <span class="model-selector-label">Select Classical ML Model</span>
+      <div class="model-grid">
+        <label>
+          <input type="radio" name="model_type" value="xgboost" class="model-card-input" checked />
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-title">⚡ XGBoost</span>
+              <span class="best-tag">R²: 0.957</span>
+            </div>
+            <span class="model-desc">Gradient Boosted Trees</span>
+            <span class="model-metric">MAE: 242 veh/hr</span>
+          </div>
+        </label>
+
+        <label>
+          <input type="radio" name="model_type" value="random_forest" class="model-card-input" />
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-title">🌲 Random Forest</span>
+              <span class="best-tag" style="color:#60a5fa; background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.25)">R²: 0.956</span>
+            </div>
+            <span class="model-desc">Bagged Ensemble Trees</span>
+            <span class="model-metric">MAE: 243 veh/hr</span>
+          </div>
+        </label>
+
+        <label>
+          <input type="radio" name="model_type" value="ridge_regression" class="model-card-input" />
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-title">📈 Ridge</span>
+              <span class="best-tag" style="color:#cbd5e1; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2)">R²: 0.833</span>
+            </div>
+            <span class="model-desc">Regularized Linear</span>
+            <span class="model-metric">MAE: 612 veh/hr</span>
+          </div>
+        </label>
+      </div>
+
+      <!-- Quick Test Scenarios Bar -->
+      <div class="scenarios-wrap">
+        <span class="scenarios-title">⚡ Quick Traffic Scenarios (Click to test model sensitivity):</span>
+        <div class="scenario-chips">
+          <button type="button" class="chip" onclick="applyScenario('rush_morning')">🌅 8 AM Morning Rush</button>
+          <button type="button" class="chip" onclick="applyScenario('night_empty')">🌙 2 AM Late Night</button>
+          <button type="button" class="chip" onclick="applyScenario('midday_flow')">🚗 12 PM Midday</button>
+          <button type="button" class="chip" onclick="applyScenario('rush_evening')">🌆 5 PM Evening Rush</button>
+          <button type="button" class="chip" onclick="applyScenario('weekend_sun')">🏖️ Sunday Afternoon</button>
+          <button type="button" class="chip" onclick="applyScenario('snowstorm')">❄️ Winter Snowstorm</button>
+        </div>
+      </div>
+
+      <!-- Form Inputs Grid -->
+      <div class="form-grid">
+
+        <!-- Date & Time (Auto-fetched, fully editable) -->
+        <div class="form-group">
+          <label class="field-label" for="date_time">
+            <span>🕐 Target Date &amp; Time</span>
+            <span class="action-link" id="btnNow" onclick="setDateTimeToNow()">⚡ Set to Now</span>
+          </label>
+          <input type="datetime-local" id="date_time" step="3600" />
+          <span class="input-hint">Auto-detected from your local device clock.</span>
+        </div>
+
+        <!-- Temperature (Dual Celsius / Kelvin) -->
+        <div class="form-group">
+          <label class="field-label" for="temp_celsius">
+            <span>🌡️ Temperature (°C)</span>
+            <span id="tempKelvinLabel" class="action-link" style="cursor:default">293.15 K</span>
+          </label>
+          <div class="temp-input-wrap">
+            <input type="number" id="temp_celsius" value="20" min="-40" max="55" step="0.5" />
+            <div class="temp-feedback-pill" id="tempFeedback">20.0 °C</div>
+          </div>
+          <span class="input-hint">Enter in Celsius. Model automatically transforms to Kelvin.</span>
+        </div>
+
+        <!-- Weather Condition -->
+        <div class="form-group">
+          <label class="field-label" for="weather_main">
+            <span>🌤️ Weather Category</span>
+          </label>
+          <select id="weather_main" onchange="syncRoadCondition(this.value)">
+            <option value="Clear">☀️ Clear (Sunny / Fair)</option>
+            <option value="Clouds">⛅ Clouds (Overcast / Scattered)</option>
+            <option value="Rain">🌧️ Rain (Light to Moderate)</option>
+            <option value="Snow">❄️ Snow (Winter Conditions)</option>
+            <option value="Mist">🌫️ Mist</option>
+            <option value="Fog">🌁 Dense Fog</option>
+            <option value="Drizzle">🌦️ Drizzle</option>
+            <option value="Thunderstorm">⛈️ Thunderstorm</option>
+            <option value="Haze">🌁 Haze</option>
+          </select>
+          <span class="input-hint">Primary meteorological observation.</span>
+        </div>
+
+        <!-- Road Condition -->
+        <div class="form-group">
+          <label class="field-label" for="road_condition">
+            <span>🛣️ Road Surface Condition</span>
+          </label>
+          <select id="road_condition">
+            <option value="Dry / Normal">🟢 Dry / Normal Surface</option>
+            <option value="Wet / Damp">💧 Wet / Damp Roadway</option>
+            <option value="Snow / Ice Covered">❄️ Snow / Ice Covered Surface</option>
+            <option value="Slippery / Hazardous">⚠️ Slippery / Reduced Grip</option>
+            <option value="Flooded / Waterlogged">🌊 Flooded / Waterlogged Roadway</option>
+          </select>
+          <span class="input-hint">Accounts for highway friction and driver caution.</span>
+        </div>
+
+        <!-- Holiday Selection -->
+        <div class="form-group">
+          <label class="field-label" for="holiday">
+            <span>🎉 Holiday Status</span>
+          </label>
+          <select id="holiday">
+            <option value="None">No Holiday (Regular Day)</option>
+            <option value="Christmas Day">🎄 Christmas Day</option>
+            <option value="New Years Day">🎆 New Year's Day</option>
+            <option value="Thanksgiving Day">🦃 Thanksgiving Day</option>
+            <option value="Labor Day">👷 Labor Day</option>
+            <option value="Independence Day">🇺🇸 Independence Day</option>
+            <option value="Memorial Day">🎖️ Memorial Day</option>
+            <option value="Martin Luther King Jr Day">✊ MLK Jr Day</option>
+            <option value="Columbus Day">⛵ Columbus Day</option>
+            <option value="Washingtons Birthday">🎂 Presidents' Day</option>
+            <option value="Veterans Day">🪖 Veterans Day</option>
+          </select>
+          <span class="input-hint">Suppresses commercial weekday commute spikes.</span>
+        </div>
+
+        <!-- Precipitation (Rainfall & Snowfall in split) -->
+        <div class="form-group">
+          <label class="field-label" for="rain_1h">
+            <span>🌧️ Precipitation (mm / hour)</span>
+          </label>
+          <div style="display:flex; gap:10px;">
+            <input type="number" id="rain_1h" placeholder="Rain (mm)" min="0" max="300" step="0.5" value="0" style="flex:1" title="Rainfall in mm" />
+            <input type="number" id="snow_1h" placeholder="Snow (mm)" min="0" max="100" step="0.5" value="0" style="flex:1" title="Snowfall in mm" />
+          </div>
+          <span class="input-hint">Left: Rainfall (mm) &nbsp;·&nbsp; Right: Snowfall (mm).</span>
+        </div>
+
+        <!-- Cloud Coverage Range Slider -->
+        <div class="form-group full-width">
+          <label class="field-label" for="clouds_all">
+            <span>☁️ Cloud Coverage</span>
+            <span id="cloudPercentageText" style="color:var(--cyan); font-weight:700">20%</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" class="range-slider" id="clouds_all" min="0" max="100" value="20" step="5" oninput="updateCloudPercentage(this.value)" />
+            <div class="range-scale">
+              <span>0% Clear Sky</span>
+              <span>50% Partly Cloudy</span>
+              <span>100% Fully Overcast</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Submit Button -->
+      <button type="button" class="btn-submit" id="btnPredict" onclick="executePrediction()">
+        <span>🔮</span>
+        <span id="btnText">Predict Traffic Volume</span>
+      </button>
+
+    </main>
+
+    <!-- Error Message Banner -->
+    <div class="error-card" id="errorCard"></div>
+
+    <!-- Prediction Results Display -->
+    <section class="result-card" id="resultCard">
+      <div class="result-header">Estimated Next-Hour Highway Traffic</div>
+      <div class="result-volume-wrap">
+        <span class="result-volume" id="resVolume">—</span>
+      </div>
+      <div class="result-unit">vehicles / hour</div>
+
+      <div class="status-badge" id="resBadge">
+        <span class="status-dot" id="resDot"></span>
+        <span id="resBadgeText">MODERATE</span>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-fill" id="resBar" style="width: 0%"></div>
+      </div>
+
+      <div class="result-summary" id="resSummary">
+        Analyzing conditions...
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-stat">
+          <span class="meta-stat-label">Model Engine</span>
+          <span class="meta-stat-val" id="resModel">—</span>
+        </div>
+        <div class="meta-stat">
+          <span class="meta-stat-label">Target Timestamp</span>
+          <span class="meta-stat-val" id="resTimestamp">—</span>
+        </div>
+        <div class="meta-stat">
+          <span class="meta-stat-label">Capacity Index</span>
+          <span class="meta-stat-val" id="resCongestion">—</span>
+        </div>
+        <div class="meta-stat">
+          <span class="meta-stat-label">Model Latency</span>
+          <span class="meta-stat-val" id="resLatency">—</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    /* ── Backend API URL Resolution ──────────────── */
+    // When served over HTTP/HTTPS (local or EC2 public IP), use relative path so it seamlessly works on any host/port.
+    // If opened directly from file system (file://), fallback to local API server.
+    const API_BASE = (window.location.protocol === 'file:')
+      ? 'http://127.0.0.1:8000'
+      : '';
+
+    // Check backend health on load
+    async function checkBackendHealth() {
+      const dot = document.getElementById('backendStatusDot');
+      const text = document.getElementById('backendStatusText');
+      try {
+        const resp = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (dot) {
+            dot.style.background = '#10b981';
+            dot.style.boxShadow = '0 0 8px #10b981';
+          }
+          if (text) text.textContent = 'GeoMind API Connected';
+        } else {
+          throw new Error('Degraded');
+        }
+      } catch (e) {
+        if (dot) {
+          dot.style.background = '#ef4444';
+          dot.style.boxShadow = '0 0 8px #ef4444';
+        }
+        if (text) text.textContent = 'Backend Offline — Run: uvicorn api.main:app';
+      }
+    }
+    checkBackendHealth();
+    setInterval(checkBackendHealth, 15000);
+
+    /* ── Date & Time Auto-population ──────────────── */
+    function setDateTimeToNow() {
+      const now = new Date();
+      now.setMinutes(0, 0, 0); // align to nearest hour
+      const tzOffset = now.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+      document.getElementById('date_time').value = localISOTime;
+    }
+
+    // Initialize date_time on page load
+    setDateTimeToNow();
+
+    /* ── Temperature Celsius to Kelvin Feedback ─────── */
+    const tempInput = document.getElementById('temp_celsius');
+    const tempFeedback = document.getElementById('tempFeedback');
+    const tempKelvinLabel = document.getElementById('tempKelvinLabel');
+
+    function updateTemperature() {
+      const c = parseFloat(tempInput.value);
+      if (isNaN(c)) {
+        tempFeedback.textContent = '— °C';
+        tempKelvinLabel.textContent = '— K';
+        return;
+      }
+      tempFeedback.textContent = c.toFixed(1) + ' °C';
+      const k = c + 273.15;
+      tempKelvinLabel.textContent = k.toFixed(2) + ' K';
+
+      if (c <= 0) {
+        tempFeedback.style.color = '#60a5fa';
+      } else if (c >= 32) {
+        tempFeedback.style.color = '#f87171';
+      } else {
+        tempFeedback.style.color = 'var(--cyan)';
+      }
+    }
+    tempInput.addEventListener('input', updateTemperature);
+    updateTemperature();
+
+    /* ── Cloud Slider Feedback ──────────────────────── */
+    function updateCloudPercentage(val) {
+      document.getElementById('cloudPercentageText').textContent = val + '%';
+    }
+
+    /* ── Automatic Weather to Road Condition Sync ───── */
+    function syncRoadCondition(weather) {
+      const roadSelect = document.getElementById('road_condition');
+      const rainInput = document.getElementById('rain_1h');
+      const snowInput = document.getElementById('snow_1h');
+
+      if (weather === 'Snow') {
+        roadSelect.value = 'Snow / Ice Covered';
+        if (parseFloat(snowInput.value) === 0) snowInput.value = '1.0';
+      } else if (weather === 'Rain' || weather === 'Drizzle' || weather === 'Thunderstorm') {
+        roadSelect.value = 'Wet / Damp';
+        if (parseFloat(rainInput.value) === 0) rainInput.value = '2.0';
+      } else if (weather === 'Clear' || weather === 'Clouds') {
+        roadSelect.value = 'Dry / Normal';
+        rainInput.value = '0';
+        snowInput.value = '0';
+      }
+    }
+
+    /* ── Severity Level Configuration ───────────────── */
+    const LEVEL_CONFIG = {
+      'Very Low':  { cls: 'theme-verylow',  bar: 'linear-gradient(90deg, #059669, #34d399)' },
+      'Low':       { cls: 'theme-low',      bar: 'linear-gradient(90deg, #059669, #34d399)' },
+      'Moderate':  { cls: 'theme-moderate', bar: 'linear-gradient(90deg, #d97706, #fbbf24)' },
+      'High':      { cls: 'theme-high',     bar: 'linear-gradient(90deg, #ea580c, #fb923c)' },
+      'Very High': { cls: 'theme-veryhigh', bar: 'linear-gradient(90deg, #dc2626, #f87171)' },
+      'Severe':    { cls: 'theme-severe',   bar: 'linear-gradient(90deg, #991b1b, #ef4444)' }
+    };
+
+    /* ── Prediction Execution ───────────────────────── */
+    async function executePrediction() {
+      const btn = document.getElementById('btnPredict');
+      const btnText = document.getElementById('btnText');
+      const errorCard = document.getElementById('errorCard');
+      const resultCard = document.getElementById('resultCard');
+
+      errorCard.classList.remove('visible');
+      errorCard.textContent = '';
+
+      // Validate Date & Time
+      const dtRaw = document.getElementById('date_time').value;
+      if (!dtRaw) {
+        showError('Please select a valid date and time.');
+        return;
+      }
+      let isoDateTime = dtRaw;
+      if (isoDateTime.length === 16) isoDateTime += ':00';
+
+      // Validate Temperature
+      const cVal = parseFloat(tempInput.value);
+      if (isNaN(cVal) || cVal < -50 || cVal > 60) {
+        showError('Please enter a realistic ambient temperature between -50°C and 60°C.');
+        return;
+      }
+      const kelvinVal = +(cVal + 273.15).toFixed(2);
+
+      // Model choice
+      const selectedModel = document.querySelector('input[name="model_type"]:checked').value;
+
+      const payload = {
+        observation: {
+          date_time:      isoDateTime,
+          temp:           kelvinVal,
+          rain_1h:        parseFloat(document.getElementById('rain_1h').value) || 0.0,
+          snow_1h:        parseFloat(document.getElementById('snow_1h').value) || 0.0,
+          clouds_all:     parseFloat(document.getElementById('clouds_all').value) || 0.0,
+          weather_main:   document.getElementById('weather_main').value,
+          road_condition: document.getElementById('road_condition').value,
+          holiday:        document.getElementById('holiday').value,
+        },
+        model_type: selectedModel
+      };
+
+      // In-flight state
+      btn.disabled = true;
+      btnText.textContent = 'Forecasting Traffic...';
+
+      try {
+        const resp = await fetch(`${API_BASE}/predict`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          showError(data.detail || (data.message ? data.message : 'Prediction request failed.'));
+          return;
+        }
+
+        renderPredictionResult(data);
+      } catch (err) {
+        showError(`Unable to connect to GeoMind prediction backend. Please ensure the backend server is running.`);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Predict Traffic Volume';
+      }
+    }
+
+    function renderPredictionResult(data) {
+      const resultCard = document.getElementById('resultCard');
+      const volume = Math.round(data.predicted_traffic_volume);
+      const level = data.traffic_level || 'Moderate';
+      const config = LEVEL_CONFIG[level] || LEVEL_CONFIG['Moderate'];
+
+      // Animated number count-up
+      animateVolume(volume);
+
+      // Status Badge
+      const badge = document.getElementById('resBadge');
+      badge.className = 'status-badge ' + config.cls;
+      document.getElementById('resBadgeText').textContent = level;
+
+      // Progress Bar
+      const pct = data.congestion_pct !== undefined ? data.congestion_pct : Math.min(100, Math.round((volume / 7000) * 100));
+      const bar = document.getElementById('resBar');
+      bar.style.background = config.bar;
+      setTimeout(() => {
+        bar.style.width = pct + '%';
+      }, 50);
+
+      // Contextual summary
+      document.getElementById('resSummary').textContent = data.summary || 'Forecast generated from temporal and meteorological telemetry.';
+
+      // Metadata Stats
+      const modelTitle = data.model_used.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      document.getElementById('resModel').textContent = modelTitle;
+      document.getElementById('resTimestamp').textContent = data.input_datetime.slice(11, 16);
+      document.getElementById('resCongestion').textContent = pct + '% Cap';
+      document.getElementById('resLatency').textContent = data.inference_ms + ' ms';
+
+      resultCard.classList.add('visible');
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function animateVolume(target) {
+      const el = document.getElementById('resVolume');
+      const duration = 750;
+      const startTime = performance.now();
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(ease * target);
+        el.textContent = current.toLocaleString();
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          el.textContent = target.toLocaleString();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    function showError(msg) {
+      const card = document.getElementById('errorCard');
+      card.innerHTML = '⚠️ <strong>Validation Error:</strong> ' + msg;
+      card.classList.add('visible');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ── Quick Scenario Presets ─────────────────────── */
+    function applyScenario(type) {
+      const dtInput = document.getElementById('date_time');
+      const tempIn = document.getElementById('temp_celsius');
+      const weatherSelect = document.getElementById('weather_main');
+      const roadSelect = document.getElementById('road_condition');
+      const holidaySelect = document.getElementById('holiday');
+      const rainInput = document.getElementById('rain_1h');
+      const snowInput = document.getElementById('snow_1h');
+      const cloudsInput = document.getElementById('clouds_all');
+
+      if (type === 'rush_morning') {
+        dtInput.value = '2026-10-06T08:00'; // Tuesday 8 AM
+        tempIn.value = 15;
+        weatherSelect.value = 'Clear';
+        roadSelect.value = 'Dry / Normal';
+        holidaySelect.value = 'None';
+        rainInput.value = 0;
+        snowInput.value = 0;
+        cloudsInput.value = 10;
+      } else if (type === 'night_empty') {
+        dtInput.value = '2026-10-06T02:00'; // Tuesday 2 AM
+        tempIn.value = 10;
+        weatherSelect.value = 'Clear';
+        roadSelect.value = 'Dry / Normal';
+        holidaySelect.value = 'None';
+        rainInput.value = 0;
+        snowInput.value = 0;
+        cloudsInput.value = 0;
+      } else if (type === 'midday_flow') {
+        dtInput.value = '2026-10-06T12:00'; // Tuesday 12 PM
+        tempIn.value = 22;
+        weatherSelect.value = 'Clouds';
+        roadSelect.value = 'Dry / Normal';
+        holidaySelect.value = 'None';
+        rainInput.value = 0;
+        snowInput.value = 0;
+        cloudsInput.value = 40;
+      } else if (type === 'rush_evening') {
+        dtInput.value = '2026-10-06T17:00'; // Tuesday 5 PM
+        tempIn.value = 19;
+        weatherSelect.value = 'Clear';
+        roadSelect.value = 'Dry / Normal';
+        holidaySelect.value = 'None';
+        rainInput.value = 0;
+        snowInput.value = 0;
+        cloudsInput.value = 20;
+      } else if (type === 'weekend_sun') {
+        dtInput.value = '2026-10-11T14:00'; // Sunday 2 PM
+        tempIn.value = 23;
+        weatherSelect.value = 'Clear';
+        roadSelect.value = 'Dry / Normal';
+        holidaySelect.value = 'None';
+        rainInput.value = 0;
+        snowInput.value = 0;
+        cloudsInput.value = 15;
+      } else if (type === 'snowstorm') {
+        dtInput.value = '2026-10-06T08:00'; // Tuesday 8 AM
+        tempIn.value = -6;
+        weatherSelect.value = 'Snow';
+        roadSelect.value = 'Snow / Ice Covered';
+        holidaySelect.value = 'None';
+        rainInput.value = 0;
+        snowInput.value = 6;
+        cloudsInput.value = 95;
+      }
+
+      updateTemperature();
+      updateCloudPercentage(cloudsInput.value);
+      executePrediction();
+    }
+
+    // Auto-update prediction when switching model cards if already predicted
+    document.querySelectorAll('input[name="model_type"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (document.getElementById('resultCard').classList.contains('visible')) {
+          executePrediction();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

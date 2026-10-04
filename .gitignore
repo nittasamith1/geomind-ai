@@ -1,4 +1,4 @@
-# Python
+# Python virtual environments & caches
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,26 +9,41 @@ env/
 venv/
 ENV/
 
+# Testing & Linting
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & Editor configs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
 # Jupyter
 .ipynb_checkpoints
 
-# Logs & OS
-logs/
+# Logs & OS artifacts
+logs/*.log
 *.log
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Environment variables & secrets
 .env
+.env.*
+!.env.example
 
-# Model weights & large binaries (keep gitkeeps)
-models/ml/*.pkl
-models/ml/*.joblib
-models/dl/*.pt
-models/dl/*.pth
-!models/ml/.gitkeep
-!models/dl/.gitkeep
+# Scratch & deep learning binaries
+models/*.pkl
+models/dl/*
 
-# Interim/Processed data (reproducible from data/raw)
+# Keep deployment-ready trained models explicitly tracked
+!models/preprocessor.joblib
+!models/ml/xgboost.joblib
+!models/ml/random_forest.joblib
+!models/ml/ridge_regression.joblib
+
+# Processed data
 data/processed/*.csv
 !data/processed/.gitkeep
