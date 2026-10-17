@@ -892,21 +892,186 @@
       </div>
     </section>
 
+    <!-- ── Firebase Cloud Storage & Telemetry Card ─── -->
+    <section class="card" style="margin-top: 24px;">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          Firebase Cloud Storage & Telemetry
+        </div>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+          ● geomind---ai.firebasestorage.app
+        </span>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5;">
+        Persist trained machine learning artifacts, synchronize preprocessor pipelines, and export prediction telemetry batches directly to Google Cloud Storage for Firebase.
+      </p>
+
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+        <button type="button" class="btn-scenario" onclick="exportToFirebaseStorage()" id="btnExportStorage" style="display: flex; align-items: center; gap: 8px;">
+          <span>📦</span> Export Predictions (CSV)
+        </button>
+        <button type="button" class="btn-scenario" onclick="syncModelsToFirebaseStorage()" id="btnSyncStorage" style="display: flex; align-items: center; gap: 8px;">
+          <span>🔄</span> Sync Models to Storage
+        </button>
+        <button type="button" class="btn-scenario" onclick="loadStorageModelsList()" id="btnListStorage" style="display: flex; align-items: center; gap: 8px;">
+          <span>📂</span> List Stored Artifacts
+        </button>
+      </div>
+
+      <div id="storageOutput" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #cbd5e1; word-break: break-all; max-height: 220px; overflow-y: auto;">
+      </div>
+    </section>
+
   </div>
 
   <script>
     /* ── Backend API URL Resolution ──────────────── */
-    // When served over HTTP/HTTPS (local or EC2 public IP), use relative path so it seamlessly works on any host/port.
-    // If opened directly from file system (file://), fallback to local API server.
-    const API_BASE = (window.location.protocol === 'file:')
-      ? 'http://127.0.0.1:8000'
-      : '';
+    let savedApiBase = (localStorage.getItem('geomind_api_base') || '').trim();
+    let API_BASE = savedApiBase || (
+      (window.location.protocol === 'file:' || ['5500', '3000', '5173'].includes(window.location.port))
+        ? 'http://127.0.0.1:8000'
+        : ''
+    );
+
+    function configureBackendUrl() {
+      const current = localStorage.getItem('geomind_api_base') || API_BASE || '';
+      const input = prompt(
+        "Enter GeoMind Backend API URL:\n(e.g., https://your-tunnel.ngrok-free.app or https://geomind-api-xxx.a.run.app)\n\nLeave empty to use automatic resolution:",
+        current
+      );
+      if (input !== null) {
+        const clean = input.trim().replace(/\/+$/, '');
+        if (clean) {
+          localStorage.setItem('geomind_api_base', clean);
+          API_BASE = clean;
+        } else {
+          localStorage.removeItem('geomind_api_base');
+          API_BASE = (window.location.protocol === 'file:' || ['5500', '3000', '5173'].includes(window.location.port))
+            ? 'http://127.0.0.1:8000'
+            : '';
+        }
+        checkBackendHealth();
+      }
+    }
+
+    const CANDIDATE_API_BASES = [
+      API_BASE,
+      '',
+      'http://127.0.0.1:8000',
+      'http://localhost:8000',
+      'http://127.0.0.1:8080',
+      'http://localhost:8080',
+      'http://127.0.0.1:5000'
+    ].filter((v, i, a) => v !== undefined && a.indexOf(v) === i);
+
+    async function resolveActiveApiBase() {
+      if (localStorage.getItem('geomind_api_base')) {
+        return API_BASE;
+      }
+      try {
+        const resp = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(1200) });
+        if (resp.ok) return API_BASE;
+      } catch (_) {}
+
+      for (const candidate of CANDIDATE_API_BASES) {
+        try {
+          const resp = await fetch(`${candidate}/health`, { signal: AbortSignal.timeout(1200) });
+          if (resp.ok) {
+            API_BASE = candidate;
+            return candidate;
+          }
+        } catch (_) {}
+      }
+      return API_BASE;
+    }
+
+    // Firebase Storage interactive functions
+    async function exportToFirebaseStorage() {
+      const out = document.getElementById('storageOutput');
+      const btn = document.getElementById('btnExportStorage');
+      out.style.display = 'block';
+      out.innerHTML = '<span style="color:#60a5fa;">⏳ Exporting prediction records to Firebase Storage...</span>';
+      btn.disabled = true;
+      try {
+        const resp = await fetch(`${API_BASE}/storage/export-predictions`, { method: 'POST' });
+        const res = await resp.json();
+        if (resp.ok) {
+          out.innerHTML = `<span style="color:#10b981;">✓ Successfully exported!</span><br>` +
+            `Bucket: <span style="color:#f59e0b;">${res.storage?.bucket || 'geomind---ai.firebasestorage.app'}</span><br>` +
+            `Path: <span style="color:#a78bfa;">${res.storage?.storage_path}</span><br>` +
+            `Size: ${res.storage?.size_bytes} bytes<br>` +
+            `<a href="${res.storage?.public_url}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:6px;">Download Export from Firebase Storage →</a>`;
+        } else {
+          out.innerHTML = `<span style="color:#ef4444;">✗ Export failed: ${res.detail || JSON.stringify(res)}</span>`;
+        }
+      } catch (err) {
+        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function syncModelsToFirebaseStorage() {
+      const out = document.getElementById('storageOutput');
+      const btn = document.getElementById('btnSyncStorage');
+      out.style.display = 'block';
+      out.innerHTML = '<span style="color:#60a5fa;">⏳ Uploading model artifacts (.pkl, .joblib) to Firebase Storage...</span>';
+      btn.disabled = true;
+      try {
+        const resp = await fetch(`${API_BASE}/storage/sync-models`, { method: 'POST' });
+        const res = await resp.json();
+        if (resp.ok) {
+          const files = res.synced ? res.synced.map(s => `• ${s.storage_path} (${(s.size_bytes/1024).toFixed(1)} KB)`).join('<br>') : '';
+          out.innerHTML = `<span style="color:#10b981;">✓ Model Sync Complete! (${res.synced_count} artifacts uploaded)</span><br>` +
+            `Target Bucket: <span style="color:#f59e0b;">${res.bucket}</span><br>` +
+            `<div style="margin-top:8px; line-height:1.6;">${files}</div>`;
+        } else {
+          out.innerHTML = `<span style="color:#ef4444;">✗ Sync failed: ${res.detail || JSON.stringify(res)}</span>`;
+        }
+      } catch (err) {
+        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadStorageModelsList() {
+      const out = document.getElementById('storageOutput');
+      const btn = document.getElementById('btnListStorage');
+      out.style.display = 'block';
+      out.innerHTML = '<span style="color:#60a5fa;">⏳ Querying Firebase Storage bucket...</span>';
+      btn.disabled = true;
+      try {
+        const resp = await fetch(`${API_BASE}/storage/models`);
+        const res = await resp.json();
+        if (resp.ok) {
+          if (res.count === 0) {
+            out.innerHTML = `<span style="color:#94a3b8;">No model artifacts currently found in bucket models/ prefix. Click "Sync Models to Storage" to upload them.</span>`;
+          } else {
+            const list = res.files.map(f => `• <a href="${f.public_url}" target="_blank" style="color:#38bdf8; text-decoration:none;">${f.name}</a> (${(f.size_bytes/1024).toFixed(1)} KB)`).join('<br>');
+            out.innerHTML = `<span style="color:#10b981;">✓ ${res.count} Model Artifact(s) in Storage:</span><br>` +
+              `<div style="margin-top:8px; line-height:1.6;">${list}</div>`;
+          }
+        } else {
+          out.innerHTML = `<span style="color:#ef4444;">✗ Query failed: ${res.detail || JSON.stringify(res)}</span>`;
+        }
+      } catch (err) {
+        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     // Check backend health on load
     async function checkBackendHealth() {
       const dot = document.getElementById('backendStatusDot');
       const text = document.getElementById('backendStatusText');
       try {
+        await resolveActiveApiBase();
         const resp = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
         if (resp.ok) {
           const data = await resp.json();
@@ -914,7 +1079,8 @@
             dot.style.background = '#10b981';
             dot.style.boxShadow = '0 0 8px #10b981';
           }
-          if (text) text.textContent = 'GeoMind API Connected';
+          const hostLabel = API_BASE ? ` (${API_BASE})` : '';
+          text.innerHTML = `GeoMind API Connected${hostLabel} | <span onclick="configureBackendUrl()" style="color:#a78bfa; text-decoration:underline; cursor:pointer; font-size:0.75rem;">⚙️ Change</span>`;
         } else {
           throw new Error('Degraded');
         }
@@ -923,7 +1089,13 @@
           dot.style.background = '#ef4444';
           dot.style.boxShadow = '0 0 8px #ef4444';
         }
-        if (text) text.textContent = 'Backend Offline — Run: uvicorn api.main:app';
+        if (text) {
+          if (window.location.protocol === 'https:') {
+            text.innerHTML = 'Backend Offline — Local? Open <a href="http://localhost:8000" style="color:#60a5fa; text-decoration:underline; font-weight:600;">http://localhost:8000</a> | <span onclick="configureBackendUrl()" style="color:#a78bfa; text-decoration:underline; cursor:pointer;">Set API URL</span>';
+          } else {
+            text.innerHTML = 'Backend Offline — Run: python main.py | <span onclick="configureBackendUrl()" style="color:#a78bfa; text-decoration:underline; cursor:pointer;">Set API URL</span>';
+          }
+        }
       }
     }
     checkBackendHealth();
@@ -1051,6 +1223,7 @@
       btnText.textContent = 'Forecasting Traffic...';
 
       try {
+        await resolveActiveApiBase();
         const resp = await fetch(`${API_BASE}/predict`, {
           method: 'POST',
           headers: {
@@ -1069,7 +1242,15 @@
 
         renderPredictionResult(data);
       } catch (err) {
-        showError(`Unable to connect to GeoMind prediction backend. Please ensure the backend server is running.`);
+        if (window.location.protocol === 'https:') {
+          showError(
+            `Unable to connect to backend from Firebase Hosting (HTTPS). Modern web browsers block cloud HTTPS websites from calling your personal computer's http://localhost:8000 (Mixed Content security policy).<br><br>` +
+            `👉 <strong>Recommended Solution:</strong> Open the application directly at <a href="http://localhost:8000" style="color:#60a5fa; text-decoration:underline; font-weight:700;">http://localhost:8000</a> where your local backend is running.<br><br>` +
+            `Alternatively, if you use a tunnel (e.g. ngrok / cloudflared) or deployed Cloud Run URL, click <a href="#" onclick="configureBackendUrl(); return false;" style="color:#a78bfa; text-decoration:underline; font-weight:700;">Set API URL</a> to connect it.`
+          );
+        } else {
+          showError(`Unable to connect to GeoMind prediction backend. Please ensure the backend server is running on port 8000 (run: python main.py).`);
+        }
       } finally {
         btn.disabled = false;
         btnText.textContent = 'Predict Traffic Volume';

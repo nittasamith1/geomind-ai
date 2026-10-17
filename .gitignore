@@ -34,6 +34,14 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Firebase service account key (NEVER commit this)
+*service-account*.json
+*serviceAccount*.json
+firebase-adminsdk*.json
+
+# Docker
+.dockerignore
+
 # Scratch & deep learning binaries
 models/*.pkl
 models/dl/*
@@ -47,3 +55,6 @@ models/dl/*
 # Processed data
 data/processed/*.csv
 !data/processed/.gitkeep
+
+# Firebase
+.firebase/

@@ -1,0 +1,24 @@
+rules_version = '2';
+
+// Firebase Storage Rules for GeoMind
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Model artifacts, preprocessors, reports, and exported prediction datasets
+    match /models/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /reports/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /exports/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

@@ -158,7 +158,7 @@ class HealthResponse(BaseModel):
     service: str = "GeoMind"
     environment: str = "production"
     models_loaded: dict
-    api_version: str = "3.1.0"
+    api_version: str = "4.0.0"
 
 
 class ErrorResponse(BaseModel):
