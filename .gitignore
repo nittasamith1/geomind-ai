@@ -58,3 +58,6 @@ data/processed/*.csv
 
 # Firebase
 .firebase/
+
+# Machine Learning model files
+models/*.joblib
