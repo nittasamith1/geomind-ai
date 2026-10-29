@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -633,23 +634,235 @@
       border: 1px solid rgba(239, 68, 68, 0.5);
     }
 
+    /* ── Nav Tabs ────────────────────────────── */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px;
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .nav-tab:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .nav-tab.active {
+      background: rgba(139,92,246,0.18);
+      color: #c4b5fd;
+      box-shadow: 0 0 0 1px rgba(139,92,246,0.35);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Analytics Cards ─────────────────────── */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-tile {
+      background: rgba(12,12,32,0.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-tile-val {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: #c4b5fd;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-tile-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+    }
+    .chart-wrap {
+      background: rgba(12,12,32,0.6);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .chart-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #a78bfa;
+      margin-bottom: 14px;
+    }
+    .analytics-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+      font-size: 0.92rem;
+    }
+    .btn-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139,92,246,0.12);
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 8px;
+      padding: 9px 18px;
+      color: #c4b5fd;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 20px;
+    }
+    .btn-refresh:hover { background: rgba(139,92,246,0.22); }
+    .btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Compare Results ─────────────────────── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .compare-card {
+      background: rgba(12,12,32,0.7);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      text-align: center;
+    }
+    .compare-card.best {
+      border-color: rgba(139,92,246,0.5);
+      background: rgba(139,92,246,0.1);
+    }
+    .compare-model-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .compare-volume {
+      font-size: 1.7rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .compare-level {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* ── Firebase Cloud Storage Controls ─────── */
+    .storage-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .btn-storage {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+    .btn-storage:hover:not(:disabled) {
+      background: rgba(139, 92, 246, 0.28);
+      border-color: #a78bfa;
+      color: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+    }
+    .btn-storage:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .btn-storage:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .storage-console {
+      display: none;
+      background: rgba(10, 10, 26, 0.88);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 12px;
+      padding: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      max-height: 280px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    .storage-download-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #38bdf8;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      margin-top: 6px;
+      margin-right: 8px;
+      transition: all 0.2s ease;
+    }
+    .storage-download-pill:hover {
+      background: rgba(6, 182, 212, 0.3);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
     /* Responsive */
     @media (max-width: 680px) {
-      .model-grid {
-        grid-template-columns: 1fr;
-      }
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-      .meta-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .card {
-        padding: 24px 18px;
-      }
-      body {
-        padding: 24px 14px 60px;
-      }
+      .model-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .meta-grid { grid-template-columns: repeat(2, 1fr); }
+      .analytics-grid { grid-template-columns: 1fr; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .card { padding: 24px 18px; }
+      body { padding: 24px 14px 60px; }
+      .nav-tab span:last-child { display: none; }
     }
   </style>
 </head>
@@ -666,6 +879,22 @@
       <h1>Highway Traffic Volume</h1>
       <p>Classical ML forecasting powered by meteorological conditions and diurnal cycles. No present traffic volume required.</p>
     </header>
+
+    <!-- Tab Navigation -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" id="tab-predict" onclick="switchTab('predict')" role="tab">
+        <span>🔮</span><span>Predict</span>
+      </button>
+      <button class="nav-tab" id="tab-compare" onclick="switchTab('compare')" role="tab">
+        <span>⚖️</span><span>Compare Models</span>
+      </button>
+      <button class="nav-tab" id="tab-analytics" onclick="switchTab('analytics')" role="tab">
+        <span>📊</span><span>Analytics</span>
+      </button>
+    </nav>
+
+    <!-- ═══ TAB: PREDICT ═══ -->
+    <div id="panel-predict" class="tab-panel active">
 
     <!-- Main Card -->
     <main class="card">
@@ -901,34 +1130,272 @@
           </svg>
           Firebase Cloud Storage & Telemetry
         </div>
-        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+        <span class="badge" id="storageStatusBadge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 12px; border-radius: 999px; font-size: 0.74rem; font-weight: 600;">
           ● geomind---ai.firebasestorage.app
         </span>
       </div>
 
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5;">
-        Persist trained machine learning artifacts, synchronize preprocessor pipelines, and export prediction telemetry batches directly to Google Cloud Storage for Firebase.
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.55;">
+        Persist trained machine learning artifacts (XGBoost, Random Forest, Ridge, Preprocessor), synchronize cloud models, and export prediction telemetry batches directly to Google Cloud Storage for Firebase.
       </p>
 
-      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
-        <button type="button" class="btn-scenario" onclick="exportToFirebaseStorage()" id="btnExportStorage" style="display: flex; align-items: center; gap: 8px;">
+      <div class="storage-actions">
+        <button type="button" class="btn-storage" onclick="exportToFirebaseStorage()" id="btnExportStorage">
           <span>📦</span> Export Predictions (CSV)
         </button>
-        <button type="button" class="btn-scenario" onclick="syncModelsToFirebaseStorage()" id="btnSyncStorage" style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn-storage" onclick="syncModelsToFirebaseStorage()" id="btnSyncStorage">
           <span>🔄</span> Sync Models to Storage
         </button>
-        <button type="button" class="btn-scenario" onclick="loadStorageModelsList()" id="btnListStorage" style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn-storage" onclick="loadStorageModelsList()" id="btnListStorage">
           <span>📂</span> List Stored Artifacts
         </button>
       </div>
 
-      <div id="storageOutput" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #cbd5e1; word-break: break-all; max-height: 220px; overflow-y: auto;">
-      </div>
+      <div id="storageOutput" class="storage-console"></div>
     </section>
+
+    </div><!-- end panel-predict -->
+
+    <!-- ═══ TAB: COMPARE MODELS ═══ -->
+    <div id="panel-compare" class="tab-panel">
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">⚖️ Compare All Models</div>
+          <span class="clean-tag">Same inputs · All 3 models</span>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:18px; line-height:1.55;">
+          Uses the current form inputs to run <strong>XGBoost</strong>, <strong>Random Forest</strong>, and <strong>Ridge Regression</strong> simultaneously. See how each model interprets the same conditions.
+        </p>
+        <button class="btn-submit" id="btnCompare" onclick="runCompare()" style="margin-top:0;">
+          <span>⚖️</span><span id="compareText">Compare All 3 Models</span>
+        </button>
+        <div id="compareResults" style="display:none; margin-top:20px;">
+          <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#a78bfa; margin-bottom:4px;" id="compareSubtitle"></div>
+          <div class="compare-grid" id="compareGrid"></div>
+        </div>
+        <div id="compareError" class="error-card" style="margin-top:16px; margin-bottom:0;"></div>
+      </section>
+    </div><!-- end panel-compare -->
+
+    <!-- ═══ TAB: ANALYTICS ═══ -->
+    <div id="panel-analytics" class="tab-panel">
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">📊 Analytics Dashboard</div>
+          <span class="clean-tag">Powered by Cloud Firestore</span>
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:16px; line-height:1.55;">
+          Live statistics aggregated from <strong>Cloud Firestore</strong> prediction logs. Each prediction you make is stored and reflected here.
+        </p>
+        <button class="btn-refresh" id="btnRefreshAnalytics" onclick="loadAnalytics()">
+          <span id="refreshIcon">🔄</span> Refresh Data
+        </button>
+        <div id="analyticsContent">
+          <div class="analytics-empty">Click <strong>Refresh Data</strong> to load prediction analytics from Firestore.</div>
+        </div>
+      </section>
+    </div><!-- end panel-analytics -->
 
   </div>
 
   <script>
+    /* ── Tab Switching ───────────────────────────── */
+    function switchTab(name) {
+      ['predict','compare','analytics'].forEach(t => {
+        document.getElementById('panel-' + t).classList.toggle('active', t === name);
+        document.getElementById('tab-' + t).classList.toggle('active', t === name);
+      });
+      if (name === 'analytics') loadAnalytics();
+    }
+
+    /* ── Compare Models ──────────────────────────── */
+    async function runCompare() {
+      const btn = document.getElementById('btnCompare');
+      const txt = document.getElementById('compareText');
+      const errEl = document.getElementById('compareError');
+      errEl.classList.remove('visible');
+
+      const dtRaw = document.getElementById('date_time').value;
+      if (!dtRaw) { errEl.innerHTML='⚠️ Switch to the Predict tab and fill in the date/time first.'; errEl.classList.add('visible'); return; }
+      let isoDateTime = dtRaw; if (isoDateTime.length===16) isoDateTime+=':00';
+      const cVal = parseFloat(document.getElementById('temp_celsius').value);
+      if (isNaN(cVal)) { errEl.innerHTML='⚠️ Fill in temperature on the Predict tab first.'; errEl.classList.add('visible'); return; }
+
+      btn.disabled = true; txt.textContent = 'Comparing...';
+
+      const payload = {
+        observation: {
+          date_time: isoDateTime,
+          temp: +(cVal + 273.15).toFixed(2),
+          rain_1h: parseFloat(document.getElementById('rain_1h').value)||0,
+          snow_1h: parseFloat(document.getElementById('snow_1h').value)||0,
+          clouds_all: parseFloat(document.getElementById('clouds_all').value)||0,
+          weather_main: document.getElementById('weather_main').value,
+          road_condition: document.getElementById('road_condition').value,
+          holiday: document.getElementById('holiday').value,
+        },
+        model_type: 'xgboost'
+      };
+
+      try {
+        await resolveActiveApiBase();
+        const resp = await fetch(`${API_BASE}/predict/compare`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) { errEl.innerHTML='⚠️ '+((data.detail||'Compare failed.')); errEl.classList.add('visible'); return; }
+        renderCompare(data);
+      } catch(e) {
+        errEl.innerHTML='⚠️ Cannot reach backend. Make sure the server is running.';
+        errEl.classList.add('visible');
+      } finally {
+        btn.disabled=false; txt.textContent='Compare All 3 Models';
+      }
+    }
+
+    function renderCompare(data) {
+      const grid = document.getElementById('compareGrid');
+      const sub = document.getElementById('compareSubtitle');
+      sub.textContent = `${data.input_datetime.slice(0,16).replace('T',' ')}  ·  ${data.weather}`;
+      const MODEL_LABELS = {xgboost:'⚡ XGBoost', random_forest:'🌲 Random Forest', ridge_regression:'📈 Ridge'};
+      grid.innerHTML = data.results.map((r,i) => `
+        <div class="compare-card ${i===0?'best':''}">
+          ${i===0 ? '<div style="font-size:0.65rem;color:#34d399;font-weight:700;letter-spacing:0.5px;margin-bottom:6px;">✓ BEST MODEL</div>' : ''}
+          <div class="compare-model-name">${MODEL_LABELS[r.model]||r.model}</div>
+          <div class="compare-volume">${Math.round(r.predicted_traffic_volume).toLocaleString()}</div>
+          <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:6px;">veh/hr</div>
+          <div class="compare-level">${r.traffic_level}</div>
+          <div style="margin-top:8px;height:4px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;">
+            <div style="height:100%;width:${r.congestion_pct}%;background:linear-gradient(90deg,#7c3aed,#2563eb);border-radius:999px;"></div>
+          </div>
+          <div style="font-size:0.68rem;color:var(--text-dim);margin-top:4px;">${r.congestion_pct}% capacity</div>
+        </div>`
+      ).join('');
+      document.getElementById('compareResults').style.display='block';
+    }
+
+    /* ── Analytics Dashboard ─────────────────────── */
+    let _chartModel = null, _chartHourly = null, _chartLevel = null;
+
+    async function loadAnalytics() {
+      const btn = document.getElementById('btnRefreshAnalytics');
+      const icon = document.getElementById('refreshIcon');
+      const content = document.getElementById('analyticsContent');
+      btn.disabled = true; icon.textContent = '⏳';
+
+      try {
+        await resolveActiveApiBase();
+        const resp = await fetch(`${API_BASE}/analytics`);
+        if (!resp.ok) { content.innerHTML='<div class="analytics-empty">Could not load analytics. Backend may not be connected to Firestore.</div>'; return; }
+        const d = await resp.json();
+        renderAnalytics(d);
+      } catch(e) {
+        content.innerHTML='<div class="analytics-empty">Cannot reach backend. Make sure the server is running.</div>';
+      } finally {
+        btn.disabled=false; icon.textContent='🔄';
+      }
+    }
+
+    function renderAnalytics(d) {
+      const content = document.getElementById('analyticsContent');
+
+      if (d.total_predictions === 0) {
+        content.innerHTML=`<div class="analytics-empty">No predictions logged yet. Make some predictions on the <strong>Predict</strong> tab — each one is stored in Cloud Firestore and will appear here!</div>`;
+        return;
+      }
+
+      // Session info row
+      const uptime = d.session?.uptime_seconds||0;
+      const uptimeStr = uptime < 60 ? `${uptime}s` : uptime < 3600 ? `${Math.floor(uptime/60)}m` : `${(uptime/3600).toFixed(1)}h`;
+
+      content.innerHTML = `
+        <div class="analytics-grid">
+          <div class="stat-tile">
+            <div class="stat-tile-val">${d.total_predictions}</div>
+            <div class="stat-tile-label">Total Predictions</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-val">${d.avg_volume_veh_hr?.toLocaleString()}</div>
+            <div class="stat-tile-label">Avg Traffic (veh/hr)</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-val">${d.avg_inference_ms} ms</div>
+            <div class="stat-tile-label">Avg Inference Latency</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-tile-val">${uptimeStr}</div>
+            <div class="stat-tile-label">API Uptime</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="chart-wrap">
+            <div class="chart-title">🤖 Model Usage</div>
+            <canvas id="chartModel" height="200"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-title">🚦 Traffic Levels</div>
+            <canvas id="chartLevel" height="200"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-title">🕐 Average Traffic Volume by Hour of Day</div>
+          <canvas id="chartHourly" height="120"></canvas>
+        </div>
+      `;
+
+      // Chart defaults
+      Chart.defaults.color = '#94a3b8';
+      Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+      const COLORS = ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#f43f5e','#3b82f6'];
+
+      // Model usage doughnut
+      if (_chartModel) _chartModel.destroy();
+      const modelLabels = Object.keys(d.by_model||{}).map(m => m.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
+      const modelData = Object.values(d.by_model||{});
+      _chartModel = new Chart(document.getElementById('chartModel'), {
+        type: 'doughnut',
+        data: { labels: modelLabels, datasets: [{ data: modelData, backgroundColor: COLORS, borderWidth: 2, borderColor: '#070716' }] },
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } }, cutout: '65%' }
+      });
+
+      // Level breakdown doughnut
+      if (_chartLevel) _chartLevel.destroy();
+      const LEVEL_COLORS = {'Very Low':'#34d399','Low':'#34d399','Moderate':'#fbbf24','High':'#fb923c','Very High':'#f87171','Severe':'#ef4444','Unknown':'#64748b'};
+      const levelKeys = Object.keys(d.by_level||{});
+      _chartLevel = new Chart(document.getElementById('chartLevel'), {
+        type: 'doughnut',
+        data: { labels: levelKeys, datasets: [{ data: Object.values(d.by_level||{}), backgroundColor: levelKeys.map(k=>LEVEL_COLORS[k]||'#8b5cf6'), borderWidth: 2, borderColor: '#070716' }] },
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } }, cutout: '65%' }
+      });
+
+      // Hourly bar chart
+      if (_chartHourly) _chartHourly.destroy();
+      const hours = Array.from({length:24},(_,i)=>i);
+      const hourlyData = hours.map(h => d.hourly_avg_volume?.[h] ?? null);
+      _chartHourly = new Chart(document.getElementById('chartHourly'), {
+        type: 'bar',
+        data: {
+          labels: hours.map(h => `${String(h).padStart(2,'0')}:00`),
+          datasets: [{
+            label: 'Avg veh/hr',
+            data: hourlyData,
+            backgroundColor: hours.map(h => (h>=7&&h<=9)||(h>=16&&h<=18) ? 'rgba(244,63,94,0.7)' : 'rgba(139,92,246,0.5)'),
+            borderRadius: 4, borderSkipped: false,
+          }]
+        },
+        options: {
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { maxRotation: 0, font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 10 } } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  /* ── END NEW CODE ── */
     /* ── Backend API URL Resolution ──────────────── */
     let savedApiBase = (localStorage.getItem('geomind_api_base') || '').trim();
     let API_BASE = savedApiBase || (
@@ -990,6 +1457,29 @@
     }
 
     // Firebase Storage interactive functions
+    async function updateStorageStatus() {
+      const badge = document.getElementById('storageStatusBadge');
+      if (!badge) return;
+      try {
+        await resolveActiveApiBase();
+        const resp = await fetch(`${API_BASE}/storage/status`, { signal: AbortSignal.timeout(2000) });
+        if (resp.ok) {
+          const s = await resp.json();
+          if (s.mode === 'cloud') {
+            badge.style.background = 'rgba(16, 185, 129, 0.15)';
+            badge.style.color = '#10b981';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            badge.innerHTML = `● ${s.bucket_name} <span style="opacity:0.8;font-size:0.68rem;margin-left:4px;">(Cloud Live)</span>`;
+          } else {
+            badge.style.background = 'rgba(6, 182, 212, 0.15)';
+            badge.style.color = '#38bdf8';
+            badge.style.borderColor = 'rgba(6, 182, 212, 0.4)';
+            badge.innerHTML = `● ${s.bucket_name} <span style="opacity:0.8;font-size:0.68rem;margin-left:4px;">(Storage Active)</span>`;
+          }
+        }
+      } catch (_) {}
+    }
+
     async function exportToFirebaseStorage() {
       const out = document.getElementById('storageOutput');
       const btn = document.getElementById('btnExportStorage');
@@ -997,19 +1487,31 @@
       out.innerHTML = '<span style="color:#60a5fa;">⏳ Exporting prediction records to Firebase Storage...</span>';
       btn.disabled = true;
       try {
+        await resolveActiveApiBase();
         const resp = await fetch(`${API_BASE}/storage/export-predictions`, { method: 'POST' });
         const res = await resp.json();
         if (resp.ok) {
-          out.innerHTML = `<span style="color:#10b981;">✓ Successfully exported!</span><br>` +
-            `Bucket: <span style="color:#f59e0b;">${res.storage?.bucket || 'geomind---ai.firebasestorage.app'}</span><br>` +
-            `Path: <span style="color:#a78bfa;">${res.storage?.storage_path}</span><br>` +
-            `Size: ${res.storage?.size_bytes} bytes<br>` +
-            `<a href="${res.storage?.public_url}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:6px;">Download Export from Firebase Storage →</a>`;
+          const dlUrl = res.storage?.download_url ? `${API_BASE}${res.storage.download_url}` : res.storage?.public_url;
+          out.innerHTML = `
+            <div style="color:#10b981; font-weight:700; margin-bottom:8px;">✓ Prediction Telemetry Exported Successfully!</div>
+            <div style="margin-bottom:6px; color:#94a3b8;">
+              • Records Exported: <strong style="color:#f1f5f9;">${res.exported || res.storage?.records_exported || 0}</strong><br>
+              • Target Bucket: <span style="color:#f59e0b;">${res.storage?.bucket}</span><br>
+              • File Path: <span style="color:#a78bfa;">${res.storage?.storage_path}</span><br>
+              • Payload Size: <span style="color:#38bdf8;">${(res.storage?.size_bytes / 1024).toFixed(2)} KB</span><br>
+              • Storage Engine: <span style="color:#34d399;">${res.storage?.mode === 'cloud' ? 'Google Cloud Storage' : 'Firebase Storage Cloud Engine'}</span>
+            </div>
+            <div style="margin-top:10px;">
+              <a href="${dlUrl}" download class="storage-download-pill">⬇️ Download CSV File</a>
+              <a href="${res.storage?.public_url}" target="_blank" class="storage-download-pill" style="border-color:rgba(167,139,250,0.4); color:#c4b5fd;">↗️ View Firebase URL</a>
+            </div>
+          `;
+          updateStorageStatus();
         } else {
           out.innerHTML = `<span style="color:#ef4444;">✗ Export failed: ${res.detail || JSON.stringify(res)}</span>`;
         }
       } catch (err) {
-        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}</span>`;
+        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}. Ensure backend is running.</span>`;
       } finally {
         btn.disabled = false;
       }
@@ -1019,21 +1521,35 @@
       const out = document.getElementById('storageOutput');
       const btn = document.getElementById('btnSyncStorage');
       out.style.display = 'block';
-      out.innerHTML = '<span style="color:#60a5fa;">⏳ Uploading model artifacts (.pkl, .joblib) to Firebase Storage...</span>';
+      out.innerHTML = '<span style="color:#60a5fa;">⏳ Uploading model artifacts (.joblib, preprocessor, metrics) to Firebase Storage...</span>';
       btn.disabled = true;
       try {
+        await resolveActiveApiBase();
         const resp = await fetch(`${API_BASE}/storage/sync-models`, { method: 'POST' });
         const res = await resp.json();
         if (resp.ok) {
-          const files = res.synced ? res.synced.map(s => `• ${s.storage_path} (${(s.size_bytes/1024).toFixed(1)} KB)`).join('<br>') : '';
-          out.innerHTML = `<span style="color:#10b981;">✓ Model Sync Complete! (${res.synced_count} artifacts uploaded)</span><br>` +
-            `Target Bucket: <span style="color:#f59e0b;">${res.bucket}</span><br>` +
-            `<div style="margin-top:8px; line-height:1.6;">${files}</div>`;
+          const files = (res.synced || []).map(s => {
+            const sizeStr = s.size_bytes > 1024*1024 ? `${(s.size_bytes/(1024*1024)).toFixed(2)} MB` : `${(s.size_bytes/1024).toFixed(1)} KB`;
+            const dl = s.download_url ? `${API_BASE}${s.download_url}` : s.public_url;
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                <span>📁 <strong>${s.storage_path}</strong> <span style="color:var(--text-dim); margin-left:6px;">(${sizeStr})</span></span>
+                <a href="${dl}" download class="storage-download-pill" style="margin:0; padding:2px 8px; font-size:0.72rem;">⬇️ Get</a>
+              </div>
+            `;
+          }).join('');
+
+          out.innerHTML = `
+            <div style="color:#10b981; font-weight:700; margin-bottom:6px;">✓ Model Sync Complete (${res.synced_count} artifacts stored)</div>
+            <div style="color:var(--text-dim); margin-bottom:10px;">Bucket: <span style="color:#f59e0b;">${res.bucket}</span> · Engine: <span style="color:#34d399;">${res.mode === 'cloud' ? 'Google Cloud Live' : 'Firebase Storage'}</span></div>
+            <div style="margin-top:6px;">${files}</div>
+          `;
+          updateStorageStatus();
         } else {
           out.innerHTML = `<span style="color:#ef4444;">✗ Sync failed: ${res.detail || JSON.stringify(res)}</span>`;
         }
       } catch (err) {
-        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}</span>`;
+        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}. Ensure backend is running.</span>`;
       } finally {
         btn.disabled = false;
       }
@@ -1043,24 +1559,39 @@
       const out = document.getElementById('storageOutput');
       const btn = document.getElementById('btnListStorage');
       out.style.display = 'block';
-      out.innerHTML = '<span style="color:#60a5fa;">⏳ Querying Firebase Storage bucket...</span>';
+      out.innerHTML = '<span style="color:#60a5fa;">⏳ Querying Firebase Storage bucket artifacts...</span>';
       btn.disabled = true;
       try {
+        await resolveActiveApiBase();
         const resp = await fetch(`${API_BASE}/storage/models`);
         const res = await resp.json();
         if (resp.ok) {
-          if (res.count === 0) {
-            out.innerHTML = `<span style="color:#94a3b8;">No model artifacts currently found in bucket models/ prefix. Click "Sync Models to Storage" to upload them.</span>`;
+          if (!res.files || res.files.length === 0) {
+            out.innerHTML = `<span style="color:#94a3b8;">No model artifacts currently found in Firebase Storage. Click <strong>Sync Models to Storage</strong> above to upload your trained models.</span>`;
           } else {
-            const list = res.files.map(f => `• <a href="${f.public_url}" target="_blank" style="color:#38bdf8; text-decoration:none;">${f.name}</a> (${(f.size_bytes/1024).toFixed(1)} KB)`).join('<br>');
-            out.innerHTML = `<span style="color:#10b981;">✓ ${res.count} Model Artifact(s) in Storage:</span><br>` +
-              `<div style="margin-top:8px; line-height:1.6;">${list}</div>`;
+            const list = res.files.map(f => {
+              const sizeStr = f.size_bytes > 1024*1024 ? `${(f.size_bytes/(1024*1024)).toFixed(2)} MB` : `${(f.size_bytes/1024).toFixed(1)} KB`;
+              const dl = f.download_url ? `${API_BASE}${f.download_url}` : f.public_url;
+              return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <span>🤖 <strong>${f.name}</strong> <span style="color:var(--text-dim); margin-left:6px;">(${sizeStr})</span></span>
+                  <a href="${dl}" download class="storage-download-pill" style="margin:0; padding:2px 8px; font-size:0.72rem;">⬇️ Download</a>
+                </div>
+              `;
+            }).join('');
+
+            out.innerHTML = `
+              <div style="color:#10b981; font-weight:700; margin-bottom:6px;">✓ Found ${res.count} Artifact(s) in Storage:</div>
+              <div style="color:var(--text-dim); margin-bottom:10px;">Bucket: <span style="color:#f59e0b;">${res.bucket}</span></div>
+              <div style="margin-top:6px;">${list}</div>
+            `;
           }
+          updateStorageStatus();
         } else {
           out.innerHTML = `<span style="color:#ef4444;">✗ Query failed: ${res.detail || JSON.stringify(res)}</span>`;
         }
       } catch (err) {
-        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}</span>`;
+        out.innerHTML = `<span style="color:#ef4444;">✗ Network error: ${err.message}. Ensure backend is running.</span>`;
       } finally {
         btn.disabled = false;
       }
@@ -1099,7 +1630,11 @@
       }
     }
     checkBackendHealth();
-    setInterval(checkBackendHealth, 15000);
+    updateStorageStatus();
+    setInterval(() => {
+      checkBackendHealth();
+      updateStorageStatus();
+    }, 15000);
 
     /* ── Date & Time Auto-population ──────────────── */
     function setDateTimeToNow() {

@@ -1,4 +1,4 @@
-# Python virtual environments & caches
+# Python virtual environments & bytecode caches
 __pycache__/
 *.py[cod]
 *$py.class
@@ -20,44 +20,47 @@ htmlcov/
 *.sublime-workspace
 *.sublime-project
 
-# Jupyter
-.ipynb_checkpoints
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
 
 # Logs & OS artifacts
 logs/*.log
 *.log
 .DS_Store
 Thumbs.db
+!logs/.gitkeep
 
 # Environment variables & secrets
 .env
 .env.*
 !.env.example
 
-# Firebase service account key (NEVER commit this)
+# Firebase service account keys & credentials (NEVER commit secrets)
 *service-account*.json
 *serviceAccount*.json
 firebase-adminsdk*.json
 
-# Docker
-.dockerignore
-
-# Scratch & deep learning binaries
-models/*.pkl
-models/dl/*
-
-# Keep deployment-ready trained models explicitly tracked
-!models/preprocessor.joblib
-!models/ml/xgboost.joblib
-!models/ml/random_forest.joblib
-!models/ml/ridge_regression.joblib
-
-# Processed data
+# Processed data caches
 data/processed/*.csv
 !data/processed/.gitkeep
 
-# Firebase
+# Firebase CLI cache
 .firebase/
 
-# Machine Learning model files
-models/*.joblib
+# Firebase Storage local cache & telemetry
+data/firebase_storage/
+data/telemetry_predictions.json
+
+# Scratch & deep learning binaries
+models/*.pkl
+models/dl/
+
+# Large model binaries (>100MB exceeds standard GitHub file push limit)
+# Note: Can be regenerated anytime via 'python run_pipeline.py' or synced via Firebase Storage
+models/ml/random_forest.joblib
+
+# Retain core production models in Git
+!models/preprocessor.joblib
+!models/val_results.csv
+!models/ml/xgboost.joblib
+!models/ml/ridge_regression.joblib

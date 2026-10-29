@@ -58,19 +58,24 @@ All models evaluated on chronological train ($70\%$), validation ($15\%$), and t
        ▼
 [ Google Cloud Run ]
   geomind-api (Docker + Uvicorn + FastAPI)
-  - GET  /health
-  - GET  /docs (OpenAPI Swagger)
-  - GET  /models
-  - POST /predict
+  - GET  /health, /metrics, /models, /analytics
+  - POST /predict, /predict/compare
+  - GET  /storage/status, /storage/models
+  - POST /storage/sync-models, /storage/export-predictions
        │
        ├─── [ ML Inference Pipeline ]
        │         src/feature_engineering.py
        │         models/preprocessor.joblib
        │         models/ml/{xgboost,random_forest,ridge_regression}.joblib
        │
-       └─── [ Cloud Firestore ]
-                predictions/{auto-id}
-                (prediction logs & analytics)
+       ├─── [ Cloud Firestore ]
+       │         predictions/{auto-id}
+       │         (prediction telemetry & analytics)
+       │
+       └─── [ Firebase Cloud Storage ]
+                 geomind---ai.firebasestorage.app
+                 ├── models/ (production artifacts)
+                 └── exports/ (telemetry exports)
 ```
 
 ---
@@ -270,16 +275,17 @@ Predict traffic volume for a target hour and weather condition.
 ```
 GeoMind/
 ├── api/
-│   ├── main.py                 # FastAPI application & route declarations
-│   ├── prediction.py           # Model loading & inference engine
-│   ├── schemas.py              # Pydantic request & response contracts
-│   └── firestore_client.py     # Cloud Firestore async prediction logging
+│   ├── main.py                 # FastAPI application, CORS & endpoint declarations
+│   ├── prediction.py           # Model loading & classical ML inference engine
+│   ├── schemas.py              # Pydantic request & response data contracts
+│   ├── firestore_client.py     # Cloud Firestore async prediction logging
+│   └── storage_client.py       # Firebase Cloud Storage sync & telemetry export
 ├── data/
 │   ├── raw/                    # Metro Interstate Traffic Volume dataset
-│   └── processed/              # train.csv, val.csv, test.csv
+│   └── processed/              # Chronological train.csv, val.csv, test.csv
 ├── deployment/
 │   └── deploy_firebase.sh      # One-command Firebase + Cloud Run deploy script
-├── docs/                       # Comprehensive scientific & deployment documentation
+├── docs/                       # Scientific documentation & deployment guides
 │   ├── 01_problem.md           # Problem formulation & mathematical objectives
 │   ├── 02_dataset.md           # Dataset provenance & schema profiling
 │   ├── 03_eda.md               # Exploratory data analysis & empirical patterns
@@ -290,13 +296,23 @@ GeoMind/
 │   └── FIREBASE_DEPLOYMENT_CHECKLIST.md # Pre/post-deployment verification checklist
 ├── frontend/
 │   └── index.html              # Modern glassmorphism web UI (Firebase Hosting)
+├── logs/                       # Application runtime logs (.gitkeep protected)
 ├── models/
 │   ├── preprocessor.joblib     # Fitted StandardScaler & OneHotEncoder
+│   ├── val_results.csv         # Model performance validation metrics
 │   └── ml/                     # Serialized classical ML models
 │       ├── xgboost.joblib
 │       ├── random_forest.joblib
 │       └── ridge_regression.joblib
-├── src/
+├── notebooks/                  # Interactive Jupyter notebooks for analysis & EDA
+│   ├── 01_eda.ipynb
+│   ├── 02_feature_engineering.ipynb
+│   ├── 03_model_training.ipynb
+│   └── 04_model_evaluation.ipynb
+├── scripts/                    # Operational & testing utilities
+│   ├── sync_cloud_firestore.py # Seed and sync records to Cloud Firestore
+│   └── test_live_api.py        # Live multi-scenario validation against running API
+├── src/                        # Modular Machine Learning pipeline source
 │   ├── data_ingestion.py       # Cleaning, deduplication & splitting
 │   ├── data_preprocessing.py   # Transformer pipelines
 │   ├── evaluate.py             # MAE, RMSE, R² metrics
@@ -304,18 +320,23 @@ GeoMind/
 │   ├── feature_engineering.py  # Pure contextual & meteorological features
 │   ├── logger.py               # Centralized logging configuration
 │   └── train_ml.py             # Model training & leaderboard generation
-├── tests/
+├── tests/                      # Automated test suite (Pytest & integration)
 │   ├── run_tests.py            # Standalone end-to-end verification script
 │   ├── test_features.py        # Feature engineering tests
+│   ├── test_preprocessing.py   # Transformer pipeline tests
 │   ├── test_prediction.py      # FastAPI prediction route tests
-│   └── test_preprocessing.py   # Transformer pipeline tests
+│   └── test_full_system.py     # Full integration & cloud storage route tests
 ├── .dockerignore               # Docker build exclusions
 ├── .env.example                # Environment variable template
-├── .firebaserc                 # Firebase project alias
+├── .firebaserc                 # Firebase project alias (geomind---ai)
+├── .gitignore                  # Git ignore rules for secrets and large binaries
 ├── Dockerfile                  # Cloud Run container definition
 ├── firebase.json               # Firebase Hosting + rewrite configuration
-├── requirements.txt            # Project dependencies (includes Firebase Admin SDK)
-├── run_pipeline.py             # One-click end-to-end pipeline runner
+├── main.py                     # Root convenience entrypoint (python main.py)
+├── requirements.txt            # Production dependencies (FastAPI, Firebase, ML)
+├── requirements-dev.txt        # Development dependencies (pytest, httpx)
+├── run_pipeline.py             # One-click end-to-end ML pipeline runner
+├── storage.rules               # Firebase Cloud Storage security rules
 └── README.md                   # Project documentation
 ```
 

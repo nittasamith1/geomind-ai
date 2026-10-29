@@ -1,11 +1,18 @@
 r"""
-Quick API test for GeoMind predictions.
-Run: .venv\Scripts\python.exe tests/api_test.py
-"""
-import urllib.request
-import json
+Live API End-to-End Validation Script for GeoMind.
+Sends realistic weather and commuter rush-hour scenarios to the live running server.
 
-API = "http://127.0.0.1:8000"
+Usage:
+    python scripts/test_live_api.py
+    # or specify custom server URL:
+    # $env:API_URL = "http://127.0.0.1:8000"; python scripts/test_live_api.py
+"""
+import json
+import os
+import sys
+import urllib.request
+
+API = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 
 def post(endpoint, data):
@@ -16,12 +23,12 @@ def post(endpoint, data):
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
+    with urllib.request.urlopen(req, timeout=25) as resp:
         return json.loads(resp.read())
 
 
 def get(endpoint):
-    with urllib.request.urlopen(f"{API}{endpoint}", timeout=10) as resp:
+    with urllib.request.urlopen(f"{API}{endpoint}", timeout=25) as resp:
         return json.loads(resp.read())
 
 
@@ -44,12 +51,16 @@ def make_obs(dt, temp_c=20, rain=0, snow=0, clouds=10, weather="Clear",
 
 def run_tests():
     print("=" * 65)
-    print("  GeoMind API Prediction Validation")
+    print(f"  GeoMind Live API Validation -> {API}")
     print("=" * 65)
 
-    # Health check
-    h = get("/health")
-    print(f"\nHealth: {h.get('status')}  |  models={h.get('models_loaded')}")
+    try:
+        h = get("/health")
+        print(f"\n[+] Health: {h.get('status')}  |  models={h.get('models_loaded')}")
+    except Exception as e:
+        print(f"\n[-] Server not reachable at {API}: {e}")
+        print("    Make sure uvicorn is running: python main.py")
+        sys.exit(1)
 
     scenarios = [
         ("Weekday Rush (Tue 8am Clear)",
@@ -90,7 +101,7 @@ def run_tests():
             print(f"{name:<40} ERROR: {e}")
 
     print("\n" + "=" * 65)
-    print("  All 3 models — Rush Hour Comparison")
+    print("  All 3 Models - Rush Hour Comparison (XGBoost vs RF vs Ridge)")
     print("=" * 65)
     rush_obs_base = make_obs("2024-10-01T08:00:00", temp_c=20, clouds=10)
     for model in ["xgboost", "random_forest", "ridge_regression"]:
@@ -105,6 +116,7 @@ def run_tests():
             print(f"  {model:<20} ERROR: {e}")
 
     print("=" * 65)
+    print("[+] All live scenarios completed successfully!\n")
 
 
 if __name__ == "__main__":

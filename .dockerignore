@@ -1,0 +1,56 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter
+notebooks/
+.ipynb_checkpoints/
+experiments/
+
+# Logs
+logs/
+*.log
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# Firebase / deployment meta
+.firebaserc
+firebase.json
+
+# Development / raw data
+data/raw/
+data/processed/
+
+# Docs
+docs/
+deployment/
+
+# Scratch
+*.md
+README.md
